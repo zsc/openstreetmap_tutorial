@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <base href="./">
-    <title>Untitled</title>
+    <title>第12章｜Navigation MCP：MCP Server 设计、工具编排、观测与安全</title>
     <link rel="stylesheet" href="assets/style.css">
     <link rel="stylesheet" href="assets/highlight.css">
     <script src="assets/script.js" defer></script>
@@ -130,7 +130,7 @@
                     <div class="tree-item active" >
                         <a href="chapter12.html" class="tree-link">
                             <span class="tree-icon">📄</span>
-                            <span class="tree-title">Untitled</span>
+                            <span class="tree-title">第12章｜Navigation MCP：MCP Server 设计、工具编排、观测与安全</span>
                         </a>
                     </div>
                 
@@ -146,7 +146,269 @@
         
         <main class="content">
             <article>
-                
+                <h1 id="12navigation-mcpmcp-server">第12章｜Navigation MCP：MCP Server 设计、工具编排、观测与安全</h1>
+<h2 id="1">1. 开篇段落</h2>
+<p>在前面的 11 章中，我们从零搭建了数据管道、部署了 Nominatim 和 OSRM 引擎，并通过 Facade API 统一了接口。现在，我们来到了系统的“最后一公里”：如何让大语言模型（LLM）“长出双腿”，能够自主地感知物理世界并规划行动。</p>
+<p><strong>Model Context Protocol (MCP)</strong> 是当前连接 LLM 与外部工具的事实标准。与传统 REST API 面向开发者不同，MCP Server 是直接面向 LLM 的。这意味着你的设计核心必须从“结构化数据的精确传输”转向<strong>“语义信息的压缩与引导”</strong>。</p>
+<p>本章将详细拆解如何设计一个生产级的 <strong>Navigation MCP Server</strong>。你将学习如何将导航能力映射为 MCP 的 <code>Tools</code> 和 <code>Resources</code>，如何处理 LLM 上下文窗口的限制（对庞大的地理数据进行“近似”与“压缩”），以及如何设计安全边界，防止 Agent 滥用你的地图服务。</p>
+<hr />
+<h2 id="2-api-mcp">2. 核心概念：从 API 到 MCP 的思维转换</h2>
+<h3 id="21-context-economics">2.1 上下文经济学 (Context Economics)</h3>
+<p>在设计 MCP 时，最关键的约束是 LLM 的<strong>上下文窗口（Context Window）</strong>。</p>
+<ul>
+<li><strong>传统 App</strong>：前端请求路由 API，获得一个 5MB 的 GeoJSON，包含 10,000 个坐标点，然后在地图上绘制出平滑曲线。</li>
+<li><strong>LLM Agent</strong>：如果把这 5MB 数据喂给 LLM，不仅会瞬间耗尽 Token 预算，还会因为无关信息过多导致模型“注意力发散”，甚至产生幻觉。</li>
+</ul>
+<blockquote>
+<p><strong>Rule of Thumb (设计法则)</strong>：<strong>Navigation MCP 的核心是“有损压缩”。</strong>
+不要给 LLM 看“地图（Geometry）”，要给 LLM 看“路书（Itinerary）”。只有当用户明确要求下载文件时，才通过 Resources 提供原始数据。</p>
+</blockquote>
+<h3 id="22-mcp-server">2.2 架构分层：MCP Server 的位置</h3>
+<p>Navigation MCP Server 充当了“语义翻译官”和“流量守门人”的角色。</p>
+<div class="codehilite"><pre><span></span><code><span class="k">[ User / Client ]</span>
+<span class="w">      </span><span class="na">|</span>
+<span class="w">      </span><span class="na">v</span>
+<span class="k">[ LLM (Reasoning Core) ] &lt;===(JSON Schema)=== [ Tool Definitions ]</span>
+<span class="w">      </span><span class="na">|</span>
+<span class="w">      </span><span class="na">| (Tool Call</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;Plan a route from A to B&quot;)</span>
+<span class="w">      </span><span class="na">v</span>
+<span class="na">[ MCP Server (Navigation) ]  &lt;-- (The focus of this chapter)</span>
+<span class="w">      </span><span class="na">| 1. Parameter Validation</span>
+<span class="w">      </span><span class="na">| 2. Semantic Compression</span>
+<span class="w">      </span><span class="na">| 3. Error Translation</span>
+<span class="w">      </span><span class="na">v</span>
+<span class="k">[ Facade API (Chapter 9) ]</span>
+<span class="w">      </span><span class="na">|</span>
+<span class="w">   </span><span class="na">+--+--+</span>
+<span class="w">   </span><span class="na">|     |</span>
+<span class="k">[Nominatim] [OSRM]</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-tool-core-tools">3. Tool 设计：核心工具集 (Core Tools)</h2>
+<p>我们需要将导航能力映射为一组互相配合的原子工具。这里的关键是<strong>单一职责原则</strong>，防止一个工具过于复杂。</p>
+<h3 id="31-search_location">3.1 <code>search_location</code> (地理编码)</h3>
+<p>这是导航的入口。LLM 必须先通过此工具获取明确的坐标，才能进行后续操作。</p>
+<ul>
+<li><strong>输入 Schema</strong>：<ul>
+<li><code>query</code> (string, required): 自然语言地名。</li>
+<li><code>limit</code> (integer): 限制返回数量，建议默认 3-5，防止撑爆上下文。</li>
+<li><code>viewbox</code> (string): 偏好区域（如当前地图视野），格式 <code>x1,y1,x2,y2</code>。</li>
+</ul>
+</li>
+<li><strong>输出设计 (关键)</strong>：<ul>
+<li>不要返回原始的所有 OSM Tags。</li>
+<li><strong>仅返回</strong>：<code>place_id</code>、<code>display_name</code>（清洗后的）、<code>lat</code>、<code>lon</code>、<code>type</code>（如 hospital, restaurant）。</li>
+<li><strong>歧义处理</strong>：如果搜到多个结果，不要自动选第一个。返回列表，并在 prompt 中暗示 Agent 需要向用户澄清（例如：“找到多个‘朝阳区’，请问是指北京的还是长春的？”）。</li>
+</ul>
+</li>
+</ul>
+<h3 id="32-get_route_summary">3.2 <code>get_route_summary</code> (路由规划)</h3>
+<p>注意工具名称是 <code>summary</code> 而不是 <code>geometry</code>。这是为了强调返回的是“指令摘要”。</p>
+<ul>
+<li><strong>输入 Schema</strong>：<ul>
+<li><code>start_coord</code> (string, required): <code>lon,lat</code> 格式。</li>
+<li><code>end_coord</code> (string, required): <code>lon,lat</code> 格式。</li>
+<li><code>mode</code> (enum): <code>driving</code>, <code>walking</code>, <code>cycling</code>。</li>
+<li><code>alternatives</code> (boolean): 是否返回备选路线。</li>
+</ul>
+</li>
+<li><strong>输出设计 (关键)</strong>：<ul>
+<li><strong>概览</strong>：总距离（km）、总时间（min）、ETA。</li>
+<li><strong>关键指令 (Maneuvers)</strong>：提取 OSRM response 中的 <code>steps</code>，将其转化为文本列表。<ul>
+<li><em>Good</em>: "1. 向北出发 200米; 2. 右转进入主路; 3. 直行 5公里"。</li>
+<li><em>Bad</em>: 包含 lat/lon 数组的原始 JSON。</li>
+</ul>
+</li>
+<li><strong>路况/警告</strong>：是否有收费、轮渡、未铺装路面。</li>
+</ul>
+</li>
+</ul>
+<h3 id="33-reverse_geocode_context">3.3 <code>reverse_geocode_context</code> (位置理解)</h3>
+<p>用于 Agent 理解“我现在在哪”或“这个坐标周围是什么”。</p>
+<ul>
+<li><strong>设计意图</strong>：不仅仅返回地址，还要返回<strong>上下文</strong>。</li>
+<li><strong>输出增强</strong>：除了返回标准地址（Admin Hierarchy），建议调用 Nominatim 的 <code>extratags</code>，如果附近有重要 POI（如“距离故宫东门 50 米”），应一并返回。这有助于 LLM 生成更具“人类感”的回复。</li>
+</ul>
+<hr />
+<h2 id="4">4. 展能力：编排与高级工具</h2>
+<h3 id="41-extended-tools">4.1 扩展工具集 (Extended Tools)</h3>
+<p>当基础导航满足后，Agent 需要更高级的空间推理能力。</p>
+<p>| 工具名称 | 对应后端逻辑 | 应用场景 | 设计注意点 |</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">工具名称</th>
+<th style="text-align: left;">对应后端逻辑</th>
+<th style="text-align: left;">应用场景</th>
+<th style="text-align: left;">设计注意点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>explore_nearby</code></td>
+<td style="text-align: left;">POI Search + Circle Filter</td>
+<td style="text-align: left;">"帮我找附近的加油站"</td>
+<td style="text-align: left;">必须强制分页。一次只给 LLM 看 5 个，并提供 <code>offset</code> 参数供翻页。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>check_isochrone</code></td>
+<td style="text-align: left;">Isochrone / Service Area</td>
+<td style="text-align: left;">"我 10 分钟能走到哪"</td>
+<td style="text-align: left;"><strong>绝对不要</strong>返回 Polygon 坐标串。应返回“文字描述边界”（如：最北到A街，最南到B路）。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>match_trace</code></td>
+<td style="text-align: left;">OSRM Match</td>
+<td style="text-align: left;">"分析这条轨迹对应的道路"</td>
+<td style="text-align: left;">仅供高级分析 Agent 使用，普通对话 Agent 慎用（数据量大）。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-orchestration-patterns">4.2 智能体编排模式 (Orchestration Patterns)</h3>
+<p>MCP Server 不仅仅是被动响应，它可以通过设计引导 Agent 的<strong>思维链 (Chain of Thought)</strong>。</p>
+<p><strong>推荐模式：G-C-R (Geocode - Confirm - Route)</strong></p>
+<ol>
+<li><strong>用户</strong>：去万达广场。”</li>
+<li><strong>Agent</strong> 调用 <code>search_location("万达广场")</code>。</li>
+<li><strong>MCP</strong> 返回列表：<code>[A: 北京CBD万达, B: 北京通州万达, ...]</code>。</li>
+<li><strong>Agent (思考)</strong>：结果不唯一，且没有用户偏好。</li>
+<li><strong>Agent (回复)</strong>：“北京有多个万达广场，您想去 CBD 的还是通州的？”</li>
+<li><strong>用户</strong>：“CBD 的。”</li>
+<li><strong>Agent</strong> 调用 <code>get_route(start, A.coord)</code>。</li>
+</ol>
+<blockquote>
+<p><strong>Gotcha</strong>：如果你在 MCP 中不仅做 Search 还在内部自动 Route（把两步合并），会导致 Agent 失去“澄清歧义”的机会，极易导致导航错误。<strong>工具的原子性（Atomicity）至关重要。</strong></p>
+</blockquote>
+<hr />
+<h2 id="5-error-context">5. 错误处理模型：把 Error 变成 Context</h2>
+<p>在 LLM 交互中，HTTP 500 是没有意义的。MCP 必须捕获后端错误，并将其转化为<strong>自然语言的行动建议</strong>。</p>
+<h3 id="51">5.1 错误转化表</h3>
+<p>| 后端情况 | 传统 API 响应 | MCP 响应 (作为 Tool Output) | 目的 |</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">后端情况</th>
+<th style="text-align: left;">传统 API 响应</th>
+<th style="text-align: left;">MCP 响应 (作为 Tool Output)</th>
+<th style="text-align: left;">目的</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>无结果</strong></td>
+<td style="text-align: left;">404 Not Found</td>
+<td style="text-align: left;"><code>{"error": "找到地点，建议：1.检查拼写 2.尝试更广泛的区域 3.使用 search_nearby 替代"}</code></td>
+<td style="text-align: left;">引导 Agent 换个策略尝试，而不是直接死机。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>不可路由</strong></td>
+<td style="text-align: left;">400 No Route</td>
+<td style="text-align: left;"><code>{"error": "无法规划路线。原因可能是：起点/终点在孤岛（如湖心），或两点间无连通道路（跨海）。尝试切换为 walking 模式？"}</code></td>
+<td style="text-align: left;">提供具体的物理世界解释。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>超时</strong></td>
+<td style="text-align: left;">504 Gateway Timeout</td>
+<td style="text-align: left;"><code>{"error": "计算过于复杂。请尝试将长途路线切分为两段进行规划。"}</code></td>
+<td style="text-align: left;">给出降级方案。</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-resources-prompts">6. Resources 与 Prompts 的高级用法</h2>
+<p>MCP 不止有 Tools，善用 <code>Resources</code> 和 <code>Prompts</code> 能极大提升体验。</p>
+<h3 id="61-resources">6.1 Resources：处理静态重资产</h3>
+<p>当用户说“把路线文件发给我”时，不要试图让 LLM 生成 XML 文本。</p>
+<ul>
+<li><strong>定义 Resource</strong>：<code>nav://routes/{id}/gpx</code></li>
+<li><strong>行为</strong>：MCP Server 在后台将 OSRM 结果转换为 GPX 文件，暂存到 S3/本地，并返回一个 URI 或文件句柄。</li>
+<li><strong>LLM 交互</strong>：Agent 读取该 Resource，直接作为附件展示给用户，完全绕过上下文窗口。</li>
+</ul>
+<h3 id="62-prompts">6.2 Prompts：预置“老司机”人格</h3>
+<p>在 MCP Server 中预埋 System Prompt 片段。</p>
+<ul>
+<li><strong>Prompt Name</strong>: <code>navigation_expert</code></li>
+<li><strong>内容范例</strong>：
+    &gt; "你是一个专业的导航助手。在规划路线前，你必须始终校验起点和终点的距离。如果距离超过 2000km，主动建议用户考虑飞机或火车。如果用户输入模糊（如'回家'），必须先查询用户的预设地址或要求澄清。在描述路线时，不要念经纬度，要使用‘左转’、‘沿XX路行驶’等人类语言。"</li>
+</ul>
+<hr />
+<h2 id="7">7. 生产化：安全、观测与限流</h2>
+<h3 id="71-security-sandbox">7.1 安全沙箱 (Security Sandbox)</h3>
+<p>MCP Server 允许 LLM 访问你的内网 API，这带来了 SSRF（服务端请求伪造）风险。</p>
+<ul>
+<li><strong>白名单机制</strong>：MCP Server 只能访问预定义的 Facade API 地址，严禁访问 <code>localhost</code> 或其他内网 IP。</li>
+<li><strong>只读强制</strong>：除非你有极其格的鉴权，否则 Navigation MCP <strong>严禁暴露</strong> OpenStreetMap 的编辑/写入接口。你不想让 Agent 因为幻觉把某条高速公路删了。</li>
+<li><strong>输入清洗</strong>：虽然 Facade API 有防御，但在 MCP 层仍需校验 <code>query</code> 长度（如限制 100 字符），防止恶意的超长 Prompt 攻击后端数据库。</li>
+</ul>
+<h3 id="72-observability">7.2 可观测性 (Observability)</h3>
+<p>传统的 API 监控关注 QPS 和 Latency，MCP 监控关注<strong>交互质量</strong>。</p>
+<ul>
+<li><strong>关键指标</strong>：<ul>
+<li><strong>Token Efficiency</strong>：<code>output_tokens / raw_data_size</code>。如果比例过高，说明压缩做得不够。</li>
+<li><strong>Tool Sequence</strong>：监控 Agent 的调用链。正常的链条是 <code>Search -&gt; Route</code>。如果你发现大量的 <code>Search -&gt; Search -&gt; Search</code>，说明你的搜索排序有问题，Agent 找不到想要的结果。</li>
+<li><strong>Truncation Rate</strong>：有多少次返回因为超长被 MCP 强制截断了？这意味你需要优化输出结构。</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2 id="8">8. 本章小结</h2>
+<ul>
+<li><strong>角色转变</strong>：MCP Server 是 LLM 的感官延，不是单纯的数据管道。</li>
+<li><strong>压缩是核心</strong>：将几何数据（Geometry）转化为语义指令（Instruction）是 MCP 开发者的首要任务。</li>
+<li><strong>原子化工具</strong>：保持 <code>Search</code> 和 <code>Route</code> 分离，把“决策权”和“歧义消除”留给 Agent。</li>
+<li><strong>错误即引导</strong>：良好的错误信息能让 Agent 在失败中自我修正，实现鲁棒的导航体验。</li>
+</ul>
+<hr />
+<h2 id="9">9. 练习题</h2>
+<h3 id="_1">基础题</h3>
+<ol>
+<li><strong>Schema 编写</strong>：为 <code>search_location</code> 编写一个完整的 MCP Tool Definition (JSON Schema)，要求包含 <code>query</code>、<code>city_filter</code>、<code>limit</code> 字段，并对 <code>limit</code> 设定最大值 10。</li>
+<li><strong>数据压缩</strong>：给定一段 OSRM 的 <code>route</code> JSON 响应（包含 geometry string 和 steps），请手写一个伪代码函数，将其转换为只包含“总时间”、“总距离”和“路名序列”的纯文本摘要。</li>
+<li><strong>歧义处理</strong>：设计一段 Prompt，当 Agent 调用 <code>search_location</code> 返回 5 个结果时，指导 Agent 如何向用户提问以消除歧义。</li>
+</ol>
+<h3 id="_2">挑战题</h3>
+<ol start="4">
+<li><strong>等时圈文本化</strong>：用户询问“我 15 分钟能走到哪些地方？”Valhalla/OSRM 返回了一个 GeoJSON Polygon。请设计一个算法思路，将这个多边形转化为一句人类可读的描述（例如：“向北最远到达 A 公园，向东最远到达 B 地铁站”）。<em>提示：利用 Reverse Geocode 查询多边形顶点的 POI。</em></li>
+<li><strong>多模态 MCP</strong>：假设你的 MCP Client 支持渲染图片。请设计一个 <code>get_static_map</code> 工具，利用 MCP 的 <code>Resources</code> 特性，返回一张带有路线高亮的静态地图图片（Base64 或 URL）。</li>
+<li><strong>安全审计</strong>：你的 MCP Server 被部署在公网，Agent 可能会被 Prompt Injection 攻击。请设计一套机制，防止恶意用户诱导 Agent 通过你的 MCP Server 对 Nominatim 发起 DDoS 攻击（例如高频查询）。</li>
+</ol>
+<hr />
+<h2 id="10-gotchas">10. 常见陷阱与错误 (Gotchas)</h2>
+<p>| 陷阱 | 现象 | 原因与解决方案 |</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">陷阱</th>
+<th style="text-align: left;">现象</th>
+<th style="text-align: left;">原因与解决方案</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>GeoJSON 倾倒 (The Blob)</strong></td>
+<td style="text-align: left;">Agent 响应极慢变笨，或直接报错“Context Length Exceeded”。</td>
+<td style="text-align: left;"><strong>原因</strong>：直接将 OSRM 完整的 Polyline 返回给了 LLM。<br><strong>解法</strong>：在 MCP 层剥离 <code>geometry</code> 字段，仅保留 <code>legs.steps</code> 中的 instruction。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>坐标幻觉</strong></td>
+<td style="text-align: left;">Agent 没调用搜索，直接编造了一个 <code>lat: 39.9, lon: 116.4</code> 去规划路线。</td>
+<td style="text-align: left;"><strong>原因</strong>：Prompt 中未强调必须先搜索。<br><strong>解法</strong>：在 System Prompt 中加入强约束：“获取坐标必须通过 search 工具，严禁猜测。”</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>指令死循环</strong></td>
+<td style="text-align: left;">Agent 反复调用 <code>search</code> 查找同一个地名，陷入死循环。</td>
+<td style="text-align: left;"><strong>原因</strong>：Nominatim 返回空，且错误信息太简略。<br><strong>解法</strong>：当结果为空时，MCP 应返回具体的 Query 修改建议（如“尝试去掉行政区前缀”），打破循环。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>过度拟合</strong></td>
+<td style="text-align: left;">Agent 总喜欢推荐步行，即使距离 50 公里。</td>
+<td style="text-align: left;"><strong>原因</strong>：Tool Definition 中 <code>mode</code> 的默认值设置不当或描述误导。<br><strong>解法</strong>：在 Schema description 中明：“超过 2km 建议使用 driving，短途使用 walking”。</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>（全教程完）</p>
             </article>
             
             <nav class="page-nav"><a href="chapter11.html" class="nav-link prev">← 第11章｜LLM Toolcall & Agent：导航工具设计、澄清策略与可靠执行</a><a href="CLAUDE.html" class="nav-link next">Untitled →</a></nav>
