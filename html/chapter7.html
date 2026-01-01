@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>第7章｜路由引擎选型与路网建模（OSRM / GraphHopper / Valhalla 怎么选）</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item " >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Nominatim & OpenStreetMap（OSM）导航 API 与 Navigation MCP 中文教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第1章｜全景与快速上手（从 0 跑通一次 geocode + route）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第2章｜OSM 数据模型与 ODbL 合规（底层拓扑与法律边界）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第3章｜OSM 数据获取、裁剪与增量更新（构建可持续的数据管道）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第4章｜PostGIS 与空间索引（地理查询的物理学）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第5章｜Nominatim 部署与核心 API（search / reverse / lookup）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第6章｜中文地址、POI 搜索与体验优化（让用户搜得到、搜得准）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item active" >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第7章｜路由引擎选型与路网建模（OSRM / GraphHopper / Valhalla 怎么选）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第8章｜OSRM 实战：从 OSM 数据到路由服务（含 Match/Table/Trip）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第9章｜设计“面向业务”的 OSM 导航 API（把 Nominatim/OSRM 变成产品级接口）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第10章｜生产化：性能、更新、监控、成本与合规</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第11章｜LLM Toolcall & Agent：导航工具设计、澄清策略与可靠执行</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="7osrm-graphhopper-valhalla">第7章｜路由引擎选型与路网建模（OSRM / GraphHopper / Valhalla 怎么选）</h1>
+<h2 id="71">7.1 开篇段落：从几何连线到动力学搜索</h2>
+<p>在上一章中，我们通过 Nominatim 解决了“地点在哪里”（Geocoding）的问题。现在的核心挑战变为：“如何从 A 到 B”。</p>
+<p>对于初学者来说，路由（Routing）往往被误解为在地图上寻找两点间的最短几何连线。然而，在导航工程的视角下，这是一个极具挑战的 <strong>加权有向图搜索（Weighted Directed Graph Search）</strong> 问题。你需要处理的不仅仅是距离，而是<strong>动力学成本（Dynamic Cost）</strong>：</p>
+<ul>
+<li>距离短的路可能限速低；</li>
+<li>限速高的路可能在修路；</li>
+<li>看似连通的路口可能禁止左转；</li>
+<li>对于卡车，3.5米高的桥洞就是一堵墙。</li>
+</ul>
+<p>本章将带你深入 OSM 导航栈的“心脏”。我们将剖析市面上三大主流开源引擎——<strong>OSRM</strong>、<strong>GraphHopper</strong> 和 <strong>Valhalla</strong>——的架构差异，理解 <strong>CH (Contraction Hierarchies)</strong> 与 <strong>MLD (Multi-Level Dijkstra)</strong> 等核心算法的取舍，并学习如何编写 <strong>Profile</strong>，将 OSM 的 Tag 翻译成计算机可理解的路网权重。</p>
+<p><strong>学习目标</strong>：</p>
+<ol>
+<li><strong>能力图谱</strong>：深入理解 Matrix、Match、Isochrone 背后的计算代价。</li>
+<li><strong>引擎内核</strong>：掌握 OSRM（速度）、GraphHopper（灵活）、Valhalla（动态瓦片）的架构区别。</li>
+<li><strong>建模原理</strong>：学会设计 Cost Function（成本函数），处理转向惩罚、路况权重与物理限制。</li>
+<li><strong>决策框架</strong>：根据业务场景（通用导航 vs 运筹优化 vs 户外运动）做出正确的选型。</li>
+</ol>
+<hr />
+<h2 id="72-api">7.2 导航能力清单：API 背后的算力与场景</h2>
+<p>在选型之前，必须明确你的 API 需要提供哪些计算能力。不同的能力对内存和 CPU 的消耗模式截然不同。</p>
+<h3 id="1-point-to-point-routing">1. 基础路由 (Point-to-Point Routing)</h3>
+<p>最基本的需求。输入起点、终点及途经点，返回几何（Geometry）和指令（Instructions）。</p>
+<ul>
+<li><strong>核心挑战</strong>：<strong>歧义性处理</strong>。起点在立交桥下，用户到底是在桥上还是桥下？</li>
+<li><strong>性能要求</strong>：P99 延迟通常要求在 50ms-200ms 内。</li>
+</ul>
+<h3 id="2-distance-matrix">2. 距离矩阵 (Distance Matrix)</h3>
+<p>输入 $N$ 个起点和 $M$ 个终点，计算两两之间的行程时间/距离。</p>
+<ul>
+<li><strong>场景</strong>：派单系统（哪个司机离乘客最近？）、VRP（车辆路径规划）、TSP（旅行商问题）。</li>
+<li><strong>算力特征</strong>：计算复杂度是 $O(N \times M)$。虽然可以用单源最短路算法优化，但依然是 CPU 密集型操作。</li>
+<li><strong>注意</strong>：OSRM 在这方面是绝对的王者，支持极大规模的矩阵计算。</li>
+</ul>
+<h3 id="3-map-matching-snap-to-road">3. 地图匹配 (Map Matching / Snap to Road)</h3>
+<p>输入一串带有 GPS 噪声、漂移的轨迹点序列，输出这辆车实际行驶在路网上的哪条路上。</p>
+<ul>
+<li><strong>原理</strong>：<strong>HMM (隐马尔可夫模型)</strong>。<ul>
+<li><em>发射概率</em>：GPS 点距离某条路越近，概率越大。</li>
+<li><em>转移概率</em>：车辆从路段 A 开到路段 B 是否符合拓扑逻辑（如是否连通、是否逆行）。</li>
+</ul>
+</li>
+<li><strong>场景</strong>：网约车判责（是否绕路）、按里程计费、轨迹回放修正。</li>
+</ul>
+<div class="codehilite"><pre><span></span><code>      Map Matching 示意
+
+      GPS 点:      o       o       o (漂移到路外)
+                   |       |       |
+      匹配路径:  ==+=======+=======+== (道路)
+                Node A           Node B
+</code></pre></div>
+
+<h3 id="4-isochrone">4. 等时圈 (Isochrone)</h3>
+<p>给定一个中心点，计算在 $T$ 时间（或距离）内能到达的所有区域的多边形。</p>
+<ul>
+<li><strong>算法</strong>：通常基于 Dijkstra 或 BFS 的变体，向外扩散直到成本耗尽，然后连接边缘点生成多边形。</li>
+<li><strong>场景</strong>：外卖配送范围、房产选址（“步行 15 分钟生活圈”）。</li>
+</ul>
+<hr />
+<h2 id="73-osrm-vs-graphhopper-vs-valhalla">7.3 三大引擎深度剖析：OSRM vs GraphHopper vs Valhalla</h2>
+<p>没有“完美”的引擎。这是关于 <strong>预处理时间（Preprocessing Time）</strong>、<strong>查询速度（Query Speed）</strong> 和 <strong>灵活性（Flexibility）</strong> 的“不可能三角”。</p>
+<h3 id="1-osrm-open-source-routing-machine">1. OSRM (Open Source Routing Machine)</h3>
+<ul>
+<li><strong>核心哲学</strong>：<strong>以灵活性换取极致速度</strong>。</li>
+<li><strong>技术栈</strong>：C++ / Lua (Profile)。</li>
+<li><strong>核心算法</strong>：<ul>
+<li><strong>CH (Contraction Hierarchies)</strong>：预处理阶段，它会生成大量的“捷径（Shortcuts）”。比如 A-&gt;B-&gt;C 如果是必经之路，它会生成一条 A-&gt;C 的虚拟边。查询时，它不在原始图上搜索，而是在包含捷径的层次图上搜索。</li>
+<li><strong>MLD (Multi-Level Dijkstra)</strong>：将图切分为分区（Partition）。支持更快的权重更新。</li>
+</ul>
+</li>
+<li><strong>适用场景</strong>：高并发 API、大规模矩阵计算（Matrix）。</li>
+<li><strong>致命弱点</strong>：<strong>权重固化</strong>。一旦预处理完成（耗时数小时），你不能在请求时说“这次我想开高速”。要改变策略，必须修改 Lua 脚本并重新预处理。</li>
+</ul>
+<h3 id="2-graphhopper">2. GraphHopper</h3>
+<ul>
+<li><strong>核心哲学</strong>：<strong>均衡与生态</strong>。</li>
+<li><strong>技术栈</strong>：Java。</li>
+<li><strong>核心算法</strong>：<ul>
+<li>支持 CH（类似 OSRM，快但不灵活）。</li>
+<li>支持 <strong>A* (A-Star) + Landmark (ALT)</strong>：允许在查询时动态调整权重（Flexible Mode）。</li>
+</ul>
+</li>
+<li><strong>适用场景</strong>：户外运动（Komoot 就基于此）、定制化路线（如：避开特定区域）、Java 后端集成。</li>
+<li><strong>优势</strong>：内存管理优秀，甚至可以在 Android 设备上离线运行。</li>
+</ul>
+<h3 id="3-valhalla">3. Valhalla</h3>
+<ul>
+<li><strong>核心哲学</strong>：<strong>动态瓦片化 (Tiled) 与多模式融合</strong>。</li>
+<li><strong>技术栈</strong>：C++。</li>
+<li><strong>架构特点</strong>：它不把整个地球加载到内存。它将路网切分为 Protocol Buffer 格式的瓦片。路由时，即时加载需要的瓦片并构建图。</li>
+<li><strong>适用场景</strong>：<ul>
+<li><strong>多模式路由</strong>：只有 Valhalla 能优雅处理“步行 -&gt; 地铁 -&gt; 共享单车”的混合路由。</li>
+<li><strong>资源受限环境</strong>：由于按需加载瓦片，内存占用极低。</li>
+<li><strong>复杂动态成本</strong>：支持极细粒度的请求参数（如：卡车宽2.5米、长10米、避开隧道、喜欢坡度小于5%的路）。</li>
+</ul>
+</li>
+<li><strong>弱点</strong>：纯粹的 A-to-B 驾车导航速度比 OSRM 慢一个数量级；配置和部署极其复杂。</li>
+</ul>
+<h3 id="rule-of-thumb">选型决策矩阵 (Rule-of-Thumb)</h3>
+<p>| 维度 | OSRM (CH) | OSRM (MLD) | GraphHopper | Valhalla |</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">维度</th>
+<th style="text-align: left;">OSRM (CH)</th>
+<th style="text-align: left;">OSRM (MLD)</th>
+<th style="text-align: left;">GraphHopper</th>
+<th style="text-align: left;">Valhalla</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>查询速度</strong></td>
+<td style="text-align: left;">🚀 极快 (&lt;5ms)</td>
+<td style="text-align: left;">⚡ 快 (&lt;20ms)</td>
+<td style="text-align: left;">⚡ 快 (CH) / 🐢 中 (Flex)</td>
+<td style="text-align: left;">🐢 中等</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>预处理速度</strong></td>
+<td style="text-align: left;">🐢 极慢</td>
+<td style="text-align: left;">🐇 中等</td>
+<td style="text-align: left;">🐇 中等</td>
+<td style="text-align: left;">🚀 快</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>内存消耗</strong></td>
+<td style="text-align: left;">🐘 巨大</td>
+<td style="text-align: left;">🐘 巨大</td>
+<td style="text-align: left;">🐕 中等</td>
+<td style="text-align: left;">🐜 极低</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>实时路况</strong></td>
+<td style="text-align: left;">❌ 困难</td>
+<td style="text-align: left;">✅ 支持 (Customize)</td>
+<td style="text-align: left;">❌ 困难</td>
+<td style="text-align: left;">✅ 支持</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>请求时参数</strong></td>
+<td style="text-align: left;">❌ 不支持</td>
+<td style="text-align: left;">❌ 不支持</td>
+<td style="text-align: left;">✅ 支持 (Flex)</td>
+<td style="text-align: left;">✅✅ 极其丰富</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>多模式混合</strong></td>
+<td style="text-align: left;">❌ 不支持</td>
+<td style="text-align: left;">❌ 不支持</td>
+<td style="text-align: left;">⚠️ 勉强支持</td>
+<td style="text-align: left;">✅✅ 原生支持</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="74-profile-cost-function">7.4 路网建模：Profile 与 Cost Function</h2>
+<p>路由引擎不看地图，它只看<strong>图（Graph）</strong>。你的核心工作是编写 Profile，将 OSM 的 Tag 转化为 <strong>Edge Weight（边权重）</strong> 和 <strong>Turn Cost（转向成本）</strong>。</p>
+<p>公式：
+$$ Weight = \frac{Length}{Speed \times Factor} + TurnPenalty + Bias $$</p>
+<h3 id="1-edge-modeling">1. 边的建模 (Edge Modeling)</h3>
+<p>这是最直观的部分，主要依据 <code>highway</code> 标签。</p>
+<ul>
+<li><strong>速度映射 (Speed Mapping)</strong>:<ul>
+<li><code>highway=motorway</code> $\rightarrow$ 120 km/h</li>
+<li><code>highway=residential</code> $\rightarrow$ 30 km/h</li>
+<li><code>surface=unpaved</code> (土路) $\rightarrow$ 速度打 5 折。</li>
+</ul>
+</li>
+<li><strong>通行性 (Access)</strong>:<ul>
+<li><code>access=private</code> $\rightarrow$ 除非是终点，否则权重 $\infty$。</li>
+<li><code>bollard</code> (路障) $\rightarrow$ 汽车权重 $\infty$，自行车权重 0。</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-turn-modeling">2. 节点的建模 (Turn Modeling)</h3>
+<p>初学者容易忽略：<strong>路口是有成本的</strong>。</p>
+<ul>
+<li><strong>转向角度</strong>：<ul>
+<li>直行 (0°)：成本 0s。</li>
+<li>右转 (90°)：成本 2-5s（速）。</li>
+<li>左转 (-90°)：成本 15-30s（需等待对面车流）。</li>
+<li>掉头 (180°)：成本极高，除非无路可走。</li>
+</ul>
+</li>
+<li><strong>交通设施</strong>：<ul>
+<li><code>highway=traffic_signals</code> (红绿灯)：增加平均等待时间（如 20s）。</li>
+<li><code>highway=stop</code> (停车让行)：增加 5-10s。</li>
+</ul>
+</li>
+</ul>
+<h3 id="3-prioritybias">3. 优先级与偏好 (Priority/Bias)</h3>
+<p>有时候我们希望“虽远必达”。</p>
+<ul>
+<li><strong>场景</strong>：骑行导航。</li>
+<li><strong>逻辑</strong>：即便距离更短，也要避开 <code>highway=primary</code>（主干道），优先走 <code>highway=cycleway</code>。</li>
+<li><strong>实现</strong>：给主干道施加一个 <code>Priority &lt; 1.0</code> 的系数，人为“拉长”它的感知距离。</li>
+</ul>
+<div class="codehilite"><pre><span></span><code><span class="w">      </span>转向成本模型示意
+
+<span class="w">          </span><span class="o">|</span>
+<span class="w">          </span><span class="o">|</span><span class="w"> </span><span class="ss">(</span><span class="nv">A</span><span class="ss">)</span><span class="w"> </span><span class="nv">Incoming</span><span class="w"> </span><span class="nv">Edge</span>
+<span class="w">          </span><span class="nv">v</span>
+<span class="w">      </span><span class="o">--------</span><span class="w"> </span><span class="ss">(</span><span class="nv">Node</span>:<span class="w"> </span><span class="nv">Traffic</span><span class="w"> </span><span class="nv">Light</span><span class="ss">)</span><span class="w"> </span><span class="o">---------</span>
+<span class="w">          </span><span class="o">|</span>
+<span class="w">          </span><span class="o">|</span><span class="w"> </span><span class="ss">(</span><span class="nv">B</span><span class="ss">)</span><span class="w"> </span><span class="nv">Outgoing</span>:<span class="w"> </span><span class="nv">Straight</span><span class="w"> </span><span class="ss">(</span><span class="nv">Cost</span>:<span class="w"> </span><span class="mi">20</span><span class="nv">s</span><span class="w"> </span><span class="nv">light</span><span class="w"> </span><span class="k">wait</span><span class="ss">)</span>
+<span class="w">          </span><span class="o">|</span>
+<span class="w">      </span><span class="ss">(</span><span class="nv">C</span><span class="ss">)</span><span class="w"> </span><span class="nv">Outgoing</span>:<span class="w"> </span><span class="nv">Left</span><span class="w"> </span><span class="nv">Turn</span><span class="w"> </span>
+<span class="w">          </span><span class="ss">(</span><span class="nv">Cost</span>:<span class="w"> </span><span class="mi">20</span><span class="nv">s</span><span class="w"> </span><span class="nv">light</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">15</span><span class="nv">s</span><span class="w"> </span><span class="nv">crossing</span><span class="w"> </span><span class="nv">traffic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">35</span><span class="nv">s</span><span class="ss">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="75-truck-routing">7.5 约束路由与特种车 (Truck Routing)</h2>
+<p>为卡车或特种车辆建模是 OSM 导航中利润最高但也最复杂的领域。这里涉及 <strong>硬约束</strong> 与 <strong>软约束</strong>。</p>
+<h3 id="1-hard-constraints">1. 物理维度的硬约束 (Hard Constraints)</h3>
+<p>如果车辆物理上通过不了，权重必须为 $\infty$。</p>
+<ul>
+<li><code>maxheight=*</code>: 隧道、桥梁高度。</li>
+<li><code>maxweight=*</code> / <code>maxaxleload=*</code>: 桥梁承重。</li>
+<li><code>maxwidth=*</code>: 窄路。</li>
+</ul>
+<p><strong>陷阱</strong>：在使用 OSRM (CH) 时，你无法动态传入 <code>height=3.8</code>。你必须为“4.0米卡车”、“3.5米卡车”分别预处理不同的 Profile。这就是为什么 OSRM 不适合做通用卡车导航，而 Valhalla（支持动态参数）更适合。</p>
+<h3 id="2">2. 法律与行政约束</h3>
+<ul>
+<li><code>hazmat=*</code>: 危化品禁行。</li>
+<li><code>hgv=no</code>: 货车禁行区域（市中心）。</li>
+<li>时间限制：比如“7:00-9:00 公交专用道”。这需要引擎支持<strong>时间依赖路由 (Time-dependent Routing)</strong>，目前开源引擎对此支持极其有限（通常仅作为静态惩罚处理）。</li>
+</ul>
+<hr />
+<h2 id="76-real-time-traffic">7.6 动态因素：实时交通 (Real-time Traffic)</h2>
+<p>OSM 数据是静态的。要实现“躲避拥堵”，你需要更新图的权重。</p>
+<h3 id="osrm-traffic">OSRM 的 Traffic 更新流</h3>
+<p>OSRM 的 MLD 算法支持 <code>osrm-customize</code> 命令，它能在几秒钟内更新全图权重，而无需重新构图。</p>
+<ol>
+<li><strong>映射</strong>：将外部交通流数据（Traffic Speed）匹配到 OSM 的 Way ID 上。</li>
+<li><strong>生成 CSV</strong>：格式通常为 <code>from_node, to_node, speed</code>。</li>
+<li><strong>更新</strong>：运行 <code>osrm-customize</code> 刷新 <code>.osrm.cells</code> 文件。</li>
+<li><strong>热加载</strong>：向运行中的 OSRM 进程发送 <code>SIGHUP</code> 信号或调用 reload API。</li>
+</ol>
+<h3 id="vs">历史路况 vs 实时路况</h3>
+<ul>
+<li><strong>实时</strong>：基于当前探测数据。</li>
+<li><strong>历史</strong>：基于“周一早上8点”的统计数据。在 Profile 中，可以通过 CSV 查找表根据时间段设置基础速度。</li>
+</ul>
+<hr />
+<h2 id="77">7.7 评测框架：如何验证路由质量？</h2>
+<p>不要只看“能不能通”，要看“好不好走”。</p>
+<h3 id="1-connectivity-ratio">1. 连通性测试 (Connectivity Ratio)</h3>
+<p>随机生成 10,000 对同城坐标。</p>
+<ul>
+<li>如果 &gt; 99.5% 成功规划：合格。</li>
+<li>如果大量失败：检查是否有“孤岛”区域（数据断裂）。</li>
+</ul>
+<h3 id="2-detour-factor">2. 绕路系数 (Detour Factor)</h3>
+<p>$$ \text{Detour} = \frac{\text{Route Distance}}{\text{Great Circle Distance}} $$</p>
+<ul>
+<li>城市环境：通常在 1.2 - 1.5 之间。</li>
+<li>如果某路线系数 &gt; 2.0，需人工审查：是因为中间有河没有桥？还是因为单行道数据标反了？</li>
+</ul>
+<h3 id="3-match-rate">3. 地图匹配率 (Match Rate)</h3>
+<p>用真实的 GPS 轨迹跑 <code>match</code> 接口。</p>
+<ul>
+<li>如果匹配率低，说明 OSM 路网缺失，或者 Profile 的容差设置太小。</li>
+</ul>
+<h3 id="4-violation-check">4. 违章检查 (Violation Check)</h3>
+<p>编写脚本，验证生成的 GeoJSON 是否穿过了 <code>highway=pedestrian</code> (步行街) 或 <code>oneway=-1</code> 的路段。</p>
+<hr />
+<h2 id="78">7.8 本章小结</h2>
+<ul>
+<li><strong>没有银弹</strong>：OSRM 是跑车（快但不可定制），GraphHopper 是 SUV（通用且舒适），Valhalla 是变形金刚（结构复杂但无所不能）。</li>
+<li><strong>Profile 即法律</strong>：路由引擎的行为完全由 Profile 定义。Tag 输入，Weight 是输出。</li>
+<li><strong>成本不仅仅是时间</strong>：$Cost = Time + Penalty$。通过 Penalty 我们可以控制“偏好”，而不仅仅是求快。</li>
+<li><strong>预处理的代价</strong>：越快的查询通常意味着越慢的预处理（OSRM CH）。在设计系统时，要考虑数据更新频率（每天？每小时？）。</li>
+</ul>
+<hr />
+<h2 id="79">7.9 练习题</h2>
+<h3 id="_1">基础题</h3>
+<ol>
+<li><strong>权重计算</strong>：假设某路段长度 1km，限速 60km/h。如果设置 <code>turn_cost = 0</code>，计算其 Base Cost（秒）。如果此时 Profile 将该类道路的 <code>rate</code> 设为 0.8（稍微不推荐），Cost 会变成多少？</li>
+<li><strong>引擎差异</strong>：为什么说 OSRM 的 CH 算法不适合做“实时躲避拥堵”的导航？（提示：思考权重的固化）。</li>
+<li><strong>Tag 理解</strong>：<code>highway=service</code> 和 <code>highway=residential</code> 在一般汽车导航 Profile 中，谁的优先级应该更低？为什么？</li>
+</ol>
+<h3 id="_2">挑战题</h3>
+<ol start="4">
+<li><strong>U-Turn 陷阱</strong>：在双向六车道的主干道上，OSM 通常将其画为两条独立的 <code>oneway</code> 线。如果你的路径规划在路段中间让你“掉头”，这是为什么？应该如何通过 Graph 模型来禁止这种行为？</li>
+<li><strong>等时圈原理</strong>：Valhalla 生成的 Isochrone（等时圈）边缘通常比基于网格（Grid-based）的方法更平滑，它是基于什么图论算法实现的？</li>
+<li><strong>架构设计</strong>：你需要为全国的外卖骑手设计导航。考虑到电动车可以走部分人行道、必须避开天桥（推行困难）、且需要极高的并发（百万级订单/分钟）。你会如何组合使用这些引擎？</li>
+</ol>
+<details>
+<summary>点击查看练习题提示 (Hints)</summary>
+<ol>
+<li><em>Hint</em>: 基础时间 = 60s。Cost = Time / Rate。Rate &lt; 1 会导致 Cost 变大（即引擎认为这条路“更长”了）。</li>
+<li><em>Hint</em>: CH 预处理时把所有最短路径都算死并压缩了。一旦改权重，整个压缩结构就失效了，必须重算。</li>
+<li><em>Hint</em>: <code>service</code> 通常是停车场内部道路或小巷，仅仅是“能走”，但绝不应该作为“通过性道路。</li>
+<li><em>Hint</em>: 引擎可能认为那是一个 Node，且没有禁止转向限制。需要在 Profile 中检测 <code>via_node</code> 的连接角度，或者依赖 Relation 里的 <code>restriction=no_u_turn</code>。</li>
+<li><em>Hint</em>: Valhalla 使用 SPT (Shortest Path Tree) 扩展，然后对边缘点进行多边形化 (Polygonization)，而不是简单的栅格着色。</li>
+<li><em>Hint</em>: 极高并发指向 OSRM。但特殊规则（避开天桥）需要定制 Profile。可以考虑用 OSRM (MLD) 跑定制的 E-Bike Profile，或者为了更细致的避让逻辑使用 GraphHopper 的定制实例。</li>
+</ol>
+</details>
+<hr />
+<h2 id="710-gotchas">7.10 常见陷阱与错误 (Gotchas)</h2>
+<h3 id="1-snapping">1. 吸附（Snapping）导致的“瞬移”</h3>
+<ul>
+<li><strong>场景</strong>：用户在高架桥下的辅路，GPS 漂移到了高架桥上。</li>
+<li><strong>问题</strong>：导航引擎默认将起点吸附到距离最近的几何边上（可能是高架）。结果用户明明在地面，导航却让他“沿高架行驶”。</li>
+<li><strong>对策</strong>：<ul>
+<li>检查 <code>snapped_distance</code>，过大则报警。</li>
+<li>利用 <code>hint</code> 或 <code>bearings</code>（方向）参数过滤候选边。如果用户朝向与高架流向垂直，就不该吸附上去。</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-gated-communities">2. 小区“孤岛” (Gated Communities)</h3>
+<ul>
+<li><strong>现象</strong>：OSM 上很多小区是封闭的，大门节点标记了 <code>access=private</code> 或 <code>barrier=gate</code>。</li>
+<li><strong>问题</strong>：如果终点在小区里，且 Profile 设置了严格的 <code>private</code> 禁行，路由会失败，或者只导航到门口。</li>
+<li><strong>对策</strong>：设计“最后100米”逻辑。允许在终点附近的一定半径内“打破” <code>access=private</code> 的限制（Destinaton Access）。</li>
+</ul>
+<h3 id="3-ferries">3. 渡轮与跨海 (Ferries)</h3>
+<ul>
+<li><strong>现象</strong>：路线突然跨越了大海，或者绕了地球一圈也不走直线距离仅 5km 的跨海渡轮。</li>
+<li><strong>原因</strong>：<code>route=ferry</code> 的路段通常在 OSM 中也是线，但需要特殊的 <code>mode</code> 支持。如果 Profile 没配置渡轮速度，权重可能是无穷大。</li>
+<li><strong>调试</strong>：检查 Profile 中是否启用了 <code>ferry</code>，并给它设置了合理的平均速度。</li>
+</ul>
+<h3 id="4-oneway">4. 错误的 <code>oneway</code> 导致绕路</h3>
+<ul>
+<li><strong>现象</strong>：明明可以直行，导航非要绕一圈。</li>
+<li><strong>原因</strong>：最常见的 OSM 数据错误——单行道标反了，或者一段双向道误标为单向。</li>
+<li><strong>技巧</strong>：在开发环境中，使用路由引擎的 <strong>Debug UI</strong>（如 OSRM Frontend），它能显示底层的 Graph 连通性。如果看到一条线是红色的（不可通行）或者是单向箭头，哪怕地图渲染看起来是路，引擎也走不过去。</li>
+</ul>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter6.html" class="nav-link prev">← 第6章｜中文地址、POI 搜索与体验优化（让用户搜得到、搜得准）</a><a href="chapter8.html" class="nav-link next">第8章｜OSRM 实战：从 OSM 数据到路由服务（含 Match/Table/Trip） →</a></nav>
+        </main>
+    </div>
+</body>
+</html>

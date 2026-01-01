@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>第8章｜OSRM 实战：从 OSM 数据到路由服务（含 Match/Table/Trip）</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item " >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Nominatim & OpenStreetMap（OSM）导航 API 与 Navigation MCP 中文教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第1章｜全景与快速上手（从 0 跑通一次 geocode + route）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第2章｜OSM 数据模型与 ODbL 合规（底层拓扑与法律边界）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第3章｜OSM 数据获取、裁剪与增量更新（构建可持续的数据管道）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第4章｜PostGIS 与空间索引（地理查询的物理学）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第5章｜Nominatim 部署与核心 API（search / reverse / lookup）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第6章｜中文地址、POI 搜索与体验优化（让用户搜得到、搜得准）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第7章｜路由引擎选型与路网建模（OSRM / GraphHopper / Valhalla 怎么选）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item active" >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第8章｜OSRM 实战：从 OSM 数据到路由服务（含 Match/Table/Trip）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第9章｜设计“面向业务”的 OSM 导航 API（把 Nominatim/OSRM 变成产品级接口）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第10章｜生产化：性能、更新、监控、成本与合规</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第11章｜LLM Toolcall & Agent：导航工具设计、澄清策略与可靠执行</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="8osrm-osm-matchtabletrip">第8章｜OSRM 实战：从 OSM 数据到路由服务（含 Match/Table/Trip）</h1>
+<h2 id="81">8.1 开篇：从坐标点到“可行驶网络”</h2>
+<p>在上一部分（Nominatim），我们解决了“这是哪里”的问题。现在，我们进入导航系统的核心——解决“怎么去”的问题。</p>
+<p>OSRM (Open Source Routing Machine) 是高性能路由引擎的工业级标准。许多初学者认为 OSRM 只是一个“加载数据就能跑”的黑盒，但在构建商业级导航 API 时，这种理解是远远不够的。你需要控制车辆能不能走这条路（权限）、走得有多快（速度模型）、转弯有多难（惩罚模型），以及如何处理 GPS 漂移（匹配算法）。</p>
+<p><strong>本章学习目标：</strong></p>
+<ol>
+<li><strong>解构数据流</strong>：理解 Extract/Partition/Customize 三步走的必要性与内部产物。</li>
+<li><strong>掌握 Lua 动力学建模</strong>：学会阅读和修改 Lua Profile，定义不同车型的通行逻辑（不仅是速度，更是权重）。</li>
+<li><strong>算法决策（CH vs MLD）</strong>：深入理解两种加速算法的原理、内存开销与适用场景。</li>
+<li><strong>精通核心 API 机制</strong>：不仅会调用，更理解 <code>/match</code> 的 HMM 模型和 <code>/table</code> 的计算边界。</li>
+<li><strong>资源与性能</strong>：理解内存映射（mmap）、共享内存与并发模型。</li>
+</ol>
+<hr />
+<h2 id="82-osrm">8.2 OSRM 架构原理：为什么它这么快？</h2>
+<p>OSRM 之所以能在大洲级路网上实现毫秒级响应，是因为它<strong>不使用</strong>传统的 A<em> 算法直接在原始路网上搜索，而是使用</em><em>预计算（Pre-computation）</em>*技术。</p>
+<h3 id="821-pipeline">8.2.1 数据处理流水线 (Pipeline)</h3>
+<p>这一流程将 OSM 的原始 XML/PBF 数据转化为针对路由算法优化的二进制图文件。</p>
+<div class="codehilite"><pre><span></span><code><span class="k">[ OSM 原始数据 (.osm.pbf) ]</span>
+<span class="w">         </span><span class="na">|</span>
+<span class="w">         </span><span class="na">| (1) osrm-extract (提取器)</span>
+<span class="w">         </span><span class="na">| 输入</span><span class="o">:</span><span class="w"> </span><span class="s">.pbf + profile.lua</span>
+<span class="w">         </span><span class="na">v</span>
+<span class="k">[ 图拓扑 (.osrm) ] ---&gt; [ 节点、边、以及基础权重 ]</span>
+<span class="w">         </span><span class="na">|</span>
+<span class="w">         </span><span class="na">+---------------------------------------+</span>
+<span class="w">         </span><span class="na">| 决策分支</span><span class="o">:</span><span class="w"> </span><span class="s">选择算法后端                |</span>
+
+<span class="w">         </span><span class="na">| 决策分支</span><span class="o">:</span><span class="w"> </span><span class="s">选择算法后端                |</span>
+<span class="w">         </span><span class="na">|                                       |</span>
+
+<span class="w">         </span><span class="na">v                                       v</span>
+<span class="k">[ 路径 A: Contraction Hierarchies (CH) ]   [ 路径 B: Multi-Level Dijkstra (MLD) ]</span>
+<span class="w">   </span><span class="na">(极致速度，静态权重)                       (灵活更新，动态权重)</span>
+<span class="w">         </span><span class="na">|                                       |</span>
+<span class="w">         </span><span class="na">| (2a) osrm-contract                    | (2b) osrm-partition</span>
+<span class="w">         </span><span class="na">v                                       |      (图切分)</span>
+<span class="na">[ 收缩层级图 (.osrm.hsgr) ]                      v</span>
+<span class="w">         </span><span class="na">|                                 [ 分区文件 (.osrm.partition) ]</span>
+
+<span class="w">         </span><span class="na">|                                 [ 分区文件 (.osrm.partition) ]</span>
+<span class="w">         </span><span class="na">|                                       |</span>
+<span class="w">         </span><span class="na">|                                       | (2c) osrm-customize</span>
+<span class="w">         </span><span class="na">|                                       |      (权重应用)</span>
+
+<span class="w">         </span><span class="na">v                                       v</span>
+<span class="w">   </span><span class="k">[ 最终索引文件 ] &lt;---------------------- [ 定制化图数据 (.osrm.cell_metrics) ]</span>
+<span class="w">         </span><span class="na">|</span>
+<span class="w">         </span><span class="na">v</span>
+<span class="w">   </span><span class="na">(3) osrm-routed (HTTP Server)</span>
+<span class="w">   </span><span class="na">(加载至 RAM / Shared Memory)</span>
+</code></pre></div>
+
+<h3 id="822">8.2.2 关键步骤详解</h3>
+<ol>
+<li>
+<p><strong>Extract (提取)</strong>：</p>
+<ul>
+<li><strong>解析器</strong>：遍历 OSM 的 Nodes, Ways, Relations。</li>
+<li><strong>脚本执行</strong>：对每个 Way 执行 Lua 脚本，决定该路段是否保留、它是单行还是双行、它的基础速度是多少。</li>
+<li><strong>流式处理</strong>：这是最耗 CPU 和 IO 的阶段，通常需要处理数小时。</li>
+</ul>
+</li>
+<li>
+<p><strong>Contract (CH 模式)</strong>：</p>
+<ul>
+<li><strong>原理</strong>：在图中不断移除“不重要”的节点，并添加“快捷边（Shortcut）”来保持连通性。</li>
+<li><strong>例子</strong>：从北京到上海，中间经过成千上万个路口。CH 算法会预先计算出“北京-&gt;...-&gt;上海”的长距离逻辑边。查询时，算法只在这些快捷边上跳跃，大大减少了搜索空间。</li>
+<li><strong>代价</strong>：一旦图被“收缩”，权重就固化了。如果一条快捷边代表了 100 公里长的路，其中哪怕 1 公里堵车，你也无法只修改那 1 公里的权重，必须重新运行 Contract。</li>
+</ul>
+</li>
+<li>
+<p><strong>Partition + Customize (MLD 模式)</strong>：</p>
+<ul>
+<li><strong>Partition</strong>：使用惯性流（Inertial Flow）等算法将地图切割成若干个<strong>Cell（单元格）</strong>。</li>
+<li><strong>Customize</strong>：计算 Cell 内部以及 Cell 边界之间的权重。</li>
+<li><strong>优势</strong>：当你需要更新路况（如：全城限速调整、实时拥堵）时，只需要重新运行毫秒级的 <code>customize</code> 阶段，而无需重新切分地图。</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h2 id="83-lua-profile">8.3 动力学建模：Lua Profile 实战</h2>
+<p>Profile 是 OSRM 的灵魂。它不是简单的配置文件，而是<strong>代码</strong>。OSRM 通过嵌入 Lua 解释器，让开发者拥有极大的自由度来定义“路权”。</p>
+<h3 id="831">8.3.1 核心函数与生命周期</h3>
+<p>处理一个 Way 时，Lua 脚本会按顺序执行以下逻辑：</p>
+<ol>
+<li>
+<p><strong><code>process_node(profile, node, result)</code></strong>：</p>
+<ul>
+<li>检查节点属性。</li>
+<li><em>用途</em>：识别 <code>barrier=gate</code>（大门）、<code>highway=traffic_signals</code>（红绿灯）。</li>
+<li><em>产出</em>：是否可以通过，通过的延时惩罚。</li>
+</ul>
+</li>
+<li>
+<p><strong><code>process_way(profile, way, result)</code></strong>：</p>
+<ul>
+<li><strong>最核心的函数</strong>。决定路段属性。</li>
+<li><em>输入</em>：OSM tags (key-value)。</li>
+<li><em>输出</em>：<ul>
+<li><code>result.forward_mode</code> / <code>result.backward_mode</code>：能走吗？（如：<code>mode.driving</code>）</li>
+<li><code>result.forward_speed</code> / <code>result.backward_speed</code>：速度（km/h）。</li>
+<li><code>result.duration</code>：直接指定通过时长（覆盖速度计算）。</li>
+</ul>
+</li>
+<li><em>典型逻辑</em>：</li>
+</ul>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1">-- 伪代码示例</span>
+<span class="kd">local</span> <span class="n">highway</span> <span class="o">=</span> <span class="n">way</span><span class="p">:</span><span class="n">get_value_by_key</span><span class="p">(</span><span class="s2">&quot;highway&quot;</span><span class="p">)</span>
+<span class="kr">if</span> <span class="n">highway</span> <span class="o">==</span> <span class="s2">&quot;motorway&quot;</span> <span class="kr">then</span>
+    <span class="n">result</span><span class="p">.</span><span class="n">forward_speed</span> <span class="o">=</span> <span class="mi">100</span>
+    <span class="kr">if</span> <span class="n">profile</span><span class="p">.</span><span class="n">vehicle_type</span> <span class="o">==</span> <span class="s2">&quot;bicycle&quot;</span> <span class="kr">then</span>
+         <span class="n">result</span><span class="p">.</span><span class="n">forward_mode</span> <span class="o">=</span> <span class="n">mode</span><span class="p">.</span><span class="n">inaccessible</span> <span class="c1">-- 自行车禁上高速</span>
+    <span class="kr">end</span>
+<span class="kr">elseif</span> <span class="n">highway</span> <span class="o">==</span> <span class="s2">&quot;track&quot;</span> <span class="kr">then</span>
+    <span class="n">result</span><span class="p">.</span><span class="n">forward_speed</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1">-- 乡间土路</span>
+<span class="kr">end</span>
+</code></pre></div>
+
+<ol start="3">
+<li><strong><code>process_turn(profile, turn)</code></strong>：<ul>
+<li>定义转弯成本。</li>
+<li><em>输入</em>：进入边的角度、离开边的角度、是否是 U-turn。</li>
+<li><em>逻辑</em>：<ul>
+<li>直行（0°）：成本 0。</li>
+<li>右转（90°）：成本小。</li>
+<li>左转（-90°）：成本大（假设右侧通行，需等待）。</li>
+<li>U-turn（180°）：成本极大，除非没有其他路可走。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h3 id="832-vs-speed-vs-rate">8.3.2 速度 vs 权重 (Speed vs Rate)</h3>
+<p>初学者常犯的错误是混淆“物理速度”和“路由权重”。</p>
+<ul>
+<li><strong>物理速度 (Speed)</strong>：用于计算 ETA（预计到达时间）。即 <code>距离 / 速度 = 时间</code>。</li>
+<li><strong>路由权重 (Rate/Weight)</strong>：用于 Dijkstra 寻路算法的代价值。</li>
+</ul>
+<p><strong>Rule of Thumb (经验法则)</strong>：
+如果你想让导航<strong>避开</strong>某些路（例如：狭窄的胡同），但又不想完全禁止（因为可能终点就在胡同里），你应该：</p>
+<ol>
+<li>保持 <code>speed</code> 为真实值（例如 15km/h），保证 ETA 准确。</li>
+<li>引入 <code>rate</code> 概念，在内部计算 cost 时人为增加阻力。</li>
+<li>或者简单粗暴地：在 Lua 中将该路段 <code>speed</code> 设得极低（如 5km/h），这样算法会认为走这条路太慢而绕行，但副作用是计算出的 ETA 会偏大。</li>
+</ol>
+<hr />
+<h2 id="84-api">8.4 核心 API 设计深度解析</h2>
+<p>OSRM 暴露的 API 不仅是端点，它们代表了不同的图算法应用。</p>
+<h3 id="1-route">1. <code>/route</code>：不仅是寻路</h3>
+<ul>
+<li><strong>Phantom Nodes (幻影节点)</strong>：<ul>
+<li>用户输入的坐标 <code>(lon, lat)</code> 通常不会精确落在路网的节点上。</li>
+<li>OSRM 会在最近的边（Edge）上创建一个虚拟节点，将原始边切分为两段。这个过程叫 <strong>Snapping</strong>。</li>
+<li><em>Gotcha</em>：如果你的起点在立交桥下，Snapping 可能会吸附到桥面上。可以通过 <code>bearings</code>（朝向）参数来强制指定吸附方向。</li>
+</ul>
+</li>
+<li><strong>几何压缩</strong>：<ul>
+<li>默认返回 <code>polyline</code>（Google 编码算法，精度 1e-5）或 <code>polyline6</code>（精度 1e-6）。这是一个压缩字符串，大大减小了 JSON 体积。前端（Leaflet/Mapbox GL）需要解码。</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-match-hmm">2. <code>/match</code>：隐马尔可夫模型 (HMM)</h3>
+<p>这是最复杂的 API，用于将充满噪声的 GPS 轨迹“纠偏”到路网上。</p>
+<ul>
+<li>
+<p><strong>问题模型</strong>：
+    给定观测序列 $O_1, O_2, ...$ (GPS点)，寻找最可能的隐藏状态序列 $S_1, S_2, ...$ (路段位置)。</p>
+</li>
+<li>
+<p><strong>两大核心概率</strong>：</p>
+<ol>
+<li><strong>Emission Probability (发射概率)</strong>：GPS 点距离路段越近，概率越高（高斯分布）。</li>
+<li><strong>Transition Probability (转移概率)</strong>：<ul>
+<li>从点 A 的候选路段走到点 B 的候选路段，其<strong>网络距离</strong>与<strong>直线距离</strong>（或时间差下的最大速度距离）越接近，概率越高。</li>
+<li>如果两点直线距离 10米，但路网距离需绕行 5公里，则转移概率极低。</li>
+</ul>
+</li>
+</ol>
+</li>
+<li><strong>Viterbi 算法</strong>：
+    OSRM 使用 Viterbi 算法在所有可能的路径组合中找到<strong>全局概率最大</strong>的一条路径。这就是为什么有时候中间的个点的漂移会被前后的点“拉回来”。</li>
+</ul>
+<h3 id="3-table">3. <code>/table</code>：矩阵计算的边界</h3>
+<ul>
+<li><strong>算法</strong>：对于 CH，使用双向搜索；对于 MLD，使用图分割加速。</li>
+<li><strong>性能瓶颈</strong>：<ul>
+<li>计算量是 $O(N \times M)$。</li>
+<li>如果 $N=1000, M=1000$，就是 100 万次路径计算。即便是 OSRM 也需要时间。</li>
+<li><em>设计建议</em>：如果你需要计算大规模矩阵（如全城物流优化），不要一次性发 1000x1000。应拆分为多个小批次（如 100x100），或在本地部署 OSRM 并通过 C++ 绑定直接调用，避开 HTTP 开销。</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2 id="85">8.5 生产级部署与运维</h2>
+<h3 id="851">8.5.1 内存管理</h3>
+<p>OSRM 是典型的<strong>内存密集型</strong>应用。</p>
+<ul>
+<li><strong>加载机制</strong>：<ul>
+<li>OSRM 使用 <code>mmap</code> (Memory Map) 将巨大的 <code>.osrm</code> 文件映射到虚拟内存。</li>
+<li><strong>优点</strong>：操作系统负责分页调度，未访问的数据不占物理 RAM。</li>
+<li><strong>缺点</strong>：初次访问（冷启动）会产生大量 Page Fault，导致响应慢。</li>
+</ul>
+</li>
+<li><strong>预 (Warmup)</strong>：<ul>
+<li>在服务接入流量前，建议运行一个脚本，随机请求 <code>/route</code> 覆盖主要区域，强制 OS 将热数据加载到物理内存（RSS）中。</li>
+</ul>
+</li>
+</ul>
+<h3 id="852">8.5.2 并发与多线程</h3>
+<ul>
+<li><code>osrm-routed</code> 是基于 libuv 的异步 I/O，但路径计算本身是 CPU 密集的。</li>
+<li><strong>线程模型</strong>：它维护一个线程池。并发请求数超过线程数时，请求会排队。</li>
+<li><strong>配置</strong>：生产环境务必显式设置 <code>-t</code> (threads) 参数，通常设为 <code>CPU 核心数 - 1</code>，留一个核给操作系统和网络 I/O。</li>
+</ul>
+<h3 id="853">8.5.3 算法选型决策矩阵</h3>
+<p>| 特性 | Contraction Hierarchies (CH) | Multi-Level Dijkstra (MLD) |</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">特性</th>
+<th style="text-align: left;">Contraction Hierarchies (CH)</th>
+<th style="text-align: left;">Multi-Level Dijkstra (MLD)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>预处理速度</strong></td>
+<td style="text-align: left;">慢 (需要深度收缩)</td>
+<td style="text-align: left;">快 (只需切分)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>查询速度</strong></td>
+<td style="text-align: left;">极快 (毫秒级)</td>
+<td style="text-align: left;">快 (通常是 CH 的 2-3 倍耗时)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>路况更新</strong></td>
+<td style="text-align: left;"><strong>不支持</strong> (需完全重跑 Pipeline)</td>
+<td style="text-align: left;"><strong>支持</strong> (仅需 <code>osrm-customize</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>内存占用</strong></td>
+<td style="text-align: left;">较低 (图结构精简)</td>
+<td style="text-align: left;">较高 (需存储多层级 Cell 权重)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>适用场景</strong></td>
+<td style="text-align: left;">基础导航、距离矩阵、无需实时路况</td>
+<td style="text-align: left;">网约车、实时物流、避让拥堵</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="86">8.6 本章小结</h2>
+<ol>
+<li><strong>数据即代码</strong>：OSM 数据本身是不够的，必须通过 Lua Profile 赋予其物理含义。</li>
+<li><strong>预处理换时间</strong>：OSRM 的高性能源于 Extract/Contract 阶段的繁重计算。</li>
+<li><strong>匹配非查找</strong>：<code>/match</code> 使用概率模型还原轨迹，比单纯的“最近点查找”要健壮得多。</li>
+<li><strong>架构权衡</strong>：在 CH 的极致速度和 MLD 的动态灵活性之间，必须根据业务需求（是否需要实时路况）做二选一。</li>
+</ol>
+<hr />
+<h2 id="87">8.7 练习题</h2>
+<h3 id="_1">基础题</h3>
+<ol>
+<li>
+<p><strong>Profile 修改</strong>：在默认的 <code>car.lua</code> 中，如果我想让导航彻底避开所有 <code>highway=track</code>（农林土路），应该修改哪个函数？将 <code>forward_mode</code> 设为什么？
+    <details markdown="1"><summary>Hint</summary>关注 <code>process_way</code> 函数。</details>
+    <details markdown="1"><summary>答案</summary>修改 <code>process_way</code> 函数。找到处理 <code>highway</code> 标签的逻辑，将 <code>track</code> 对应的 <code>mode</code> 设为 <code>mode.inaccessible</code>。</details></p>
+</li>
+<li>
+<p><strong>API 参数</strong>：使用 <code>/route</code> 接口时，如果我只想要距离和时间，不需要具体的路线坐标点（为了节省带宽），应该传什么参数？
+    <details markdown="1"><summary>Hint</summary>overview 参数。</details>
+    <details markdown="1"><summary>答案</summary><code>overview=false</code>。这会禁止返回 <code>geometry</code> 字段。</details></p>
+</li>
+<li>
+<p><strong>算法识别</strong>：你下载了一个别人的 <code>.osrm</code> 数据包，发现里面包含 <code>.osrm.partition</code> 和 <code>.osrm.cell_metrics</code> 文件。请问这是为哪种算法准备的数据？
+    <details markdown="1"><summary>Hint</summary>Partition 是分区的概念。</details>
+    <details markdown="1"><summary>答案</summary>MLD (Multi-Level Dijkstra)。CH 算法会生成 <code>.osrm.hsgr</code> 文件。</details></p>
+</li>
+</ol>
+<h3 id="_2">挑战题</h3>
+<ol start="4">
+<li>
+<p><strong>幽灵直行问题</strong>：你在一个十字路口，直行方向是绿灯，但 OSRM 规划的路线却让你右转再掉头回来（P-turn），而不是直接左转。检查 OSM 数据发现路口是连通的。请从 Lua Profile 的 <code>process_turn</code> 角度分析可能原因。
+    <details markdown="1"><summary>Hint</summary>左转惩罚成本过高。</details>
+    <details markdown="1"><summary>答案</summary>可能是 Profile 中对“左转”设置了极高的惩罚时间（Turn Penalty），例如 60秒。而“右转+掉头+直行”的总计算成本（行驶时间 + 较小的转弯惩罚）小于 60秒。这在交通流优化中是合理的（避免阻断直行流），但如果是误设，需要调整 Profile 中的左转权重。</details></p>
+</li>
+<li>
+<p><strong>Match 漂移调试</strong>：一辆车在立交桥下的辅路行驶，GPS 信号显示在主路上。<code>/match</code> 接口强行把轨迹匹配到了主路上（虽然你设置了很小的半径）。这是为什么？如何利用 <code>radiuses</code> 以外的参数来修正？
+    <details markdown="1"><summary>Hint</summary>不仅仅是位置，还有方向。</details>
+    <details markdown="1"><summary>答案</summary>HMM 算法不仅考虑距离，还考虑拓扑连通性。如果辅路和主平行且靠得很近，仅靠坐标很难区分。应使用 <code>bearings</code> 参数，传入 GPS 记录的行进方向（如 90度）。主路和辅路虽然平行，但在进出口附近或弯道处可能有细微的方向差异，或者通过 <code>timestamps</code> 的速度计算（主路速度快，辅路速度慢）来辅助算法区分。</details></p>
+</li>
+<li>
+<p><strong>Table 性能优化</strong>：你需要计算 10,000 个用户到 5 个门店的距离矩阵。直接请求 10000x5 会导致 URL 过长或超时。除了分批次请求，如果要在<strong>一次计算中</strong>利用 OSRM 的反向搜索特性优化，应该如何构造请求？（假设从 A 到 B 和 B 到 A 路径相同）
+    <details markdown="1"><summary>Hint</summary>源与目标的概念。Table API 允许指定 sources 和 destinations。</details>
+    <details markdown="1"><summary>答案</summary>Table API 支持 <code>sources</code> 和 <code>destinations</code> 参数。你可以将 5 个门店作为 sources，10,000 个用户作为 destinations（或者反过来，取决于 API 限制）。计算 5x10000 的阵比 10000x5 通常在内部处理上并无本质区别，但关键在于利用非对称参数，避免计算完整的 10005x10005 矩阵。注意：如果是单行道多的城市，A-&gt;B 不等于 B-&gt;A，必须严格按照业务方向请求。</details></p>
+</li>
+</ol>
+<hr />
+<h2 id="88-gotchas">8.8 常见陷阱与错误 (Gotchas)</h2>
+<ol>
+<li>
+<p><strong>Lua Profile 更改不生效</strong>：</p>
+<ul>
+<li><em>现象</em>：修改了 <code>car.lua</code>，重启 <code>osrm-routed</code>，路线没变。</li>
+<li><em>原因</em>：Profile 的逻辑是在 <code>osrm-extract</code> 阶段“烧录”进图数据的。</li>
+<li><em>解决</em>：修改 Lua 后，必须<strong>从头运行</strong> <code>extract</code> -&gt; <code>partition/contract</code> -&gt; <code>customize</code> 整个流程。</li>
+</ul>
+</li>
+<li>
+<p><strong>Shared Memory 锁死</strong>：</p>
+<ul>
+<li><em>现象</em>：使用 <code>osrm-datastore</code> 更新数据时报错，或者旧进程无法退出。</li>
+<li><em>原因</em>：OSRM 在共享内存中加了锁。</li>
+<li><em>解决</em>：如果进程非正常死亡，可能留下僵尸锁。使用 <code>ipcs -m</code> 查看并用 <code>ipcrm</code> 清理，或者重启机器。</li>
+</ul>
+</li>
+<li>
+<p><strong>Coordinates Precision (坐标精度)</strong>：</p>
+<ul>
+<li><em>现象</em>：路径看起来呈锯齿状，或者匹配不准。</li>
+<li><em>原因</em>：在 Python 或 JS 中处理坐标时，不小心将浮点数截断了（例如保留了 3 位小数）。</li>
+<li><em>Rule</em>：经纬度至少保留 <strong>5位小数</strong>（约 1米精度），推荐 <strong>6位</strong>（约 0.1米）。</li>
+</ul>
+</li>
+<li>
+<p><strong>忽略了 <code>continue_straight</code></strong>：</p>
+<ul>
+<li><em>现象</em>：在只有一条路的中间点重新规划，路线居然让车掉头回去。</li>
+<li><em>原因</em>：OSRM 默认 <code>/route</code> 的起点是无方向的，可能会为了找“更近的起点”而向后搜索。</li>
+<li><em>解决</em>：在做分段导航时，设置 <code>continue_straight=true</code> 或指定 <code>bearings</code>。</li>
+</ul>
+</li>
+<li>
+<p><strong>Docker 卷权限</strong>：</p>
+<ul>
+<li><em>现象</em>：Docker 容器内无法写入 <code>.osrm</code> 文件。</li>
+<li><em>原因</em>：宿主机映射目录的 Owner 不是容器内的用户（通常是 root 或 osrm 用户）。</li>
+<li><em>解决</em>：确保 <code>chmod/chown</code> 映射目录，允许容器写入。</li>
+</ul>
+</li>
+</ol>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter7.html" class="nav-link prev">← 第7章｜路由引擎选型与路网建模（OSRM / GraphHopper / Valhalla 怎么选）</a><a href="chapter9.html" class="nav-link next">第9章｜设计“面向业务”的 OSM 导航 API（把 Nominatim/OSRM 变成产品级接口） →</a></nav>
+        </main>
+    </div>
+</body>
+</html>

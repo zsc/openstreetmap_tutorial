@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>第6章｜中文地址、POI 搜索与体验优化（让用户搜得到、搜得准）</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item " >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Nominatim & OpenStreetMap（OSM）导航 API 与 Navigation MCP 中文教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第1章｜全景与快速上手（从 0 跑通一次 geocode + route）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第2章｜OSM 数据模型与 ODbL 合规（底层拓扑与法律边界）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第3章｜OSM 数据获取、裁剪与增量更新（构建可持续的数据管道）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第4章｜PostGIS 与空间索引（地理查询的物理学）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第5章｜Nominatim 部署与核心 API（search / reverse / lookup）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item active" >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第6章｜中文地址、POI 搜索与体验优化（让用户搜得到、搜得准）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第7章｜路由引擎选型与路网建模（OSRM / GraphHopper / Valhalla 怎么选）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第8章｜OSRM 实战：从 OSM 数据到路由服务（含 Match/Table/Trip）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第9章｜设计“面向业务”的 OSM 导航 API（把 Nominatim/OSRM 变成产品级接口）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第10章｜生产化：性能、更新、监控、成本与合规</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第11章｜LLM Toolcall & Agent：导航工具设计、澄清策略与可靠执行</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="6poi">第6章｜中文地址、POI 搜索与体验优化（让用户搜得到、搜得准）</h1>
+<h2 id="1">1. 开篇段落</h2>
+<p>在搭建好 Nominatim 基础服务后，你很快会撞上一堵“现实之墙”：直接使用开源配置处理中文地址，效果往往令人沮丧。用户输入的“朝阳大悦城”可能搜不到，必须输入“朝阳北路101号”才行；或者输入“人民路”，却返回了全国几百条同名道路。</p>
+<p>这是因为 Nominatim 的核心算法（基于 Token 的词频反向索引）最初是为西方地址体系设计的，依赖空格分词和明确的层级。而中文地址是<strong>连续文本</strong>，且严重依赖<strong>隐含的层级关系</strong>。</p>
+<p>本章将带你构建一个<strong>“生产级”的搜索中间层</strong>。我们将不局限于 Nominatim 本身，而是从<strong>输入预处理（Normalization）</strong>、<strong>查询构建策略（Query Strategy）</strong>、<strong>结果重排序（Re-ranking）</strong> 以及 <strong>LLM 交互设计</strong> 四个维度，打造一套能听懂“中文人话”的导航搜索系统。</p>
+<hr />
+<h2 id="2">2. 核心概念与设计论述</h2>
+<h3 id="21-osm-vs">2.1 深入解剖：OSM 数据结构 vs. 中文地址习惯</h3>
+<p>要优化搜索，首先必须理解数据（OSM）和输入（用户）之间的错位。</p>
+<h4 id="_1">中文地址的“隐式层级”</h4>
+<p>用户习惯输入：<code>省 - 市 - 区 - 街道 - 道路 - 门牌 - POI</code>。但在实际输入中，<strong>前三级常被省略，后三级常被混用</strong>。</p>
+<h4 id="osm">OSM 的存储现状</h4>
+<p>OSM 不是一张巨大的 Excel 表，而是一张网。</p>
+<ul>
+<li><strong>行政区（Administrative Boundary）</strong>：这是多边形（Relation）。Nominatim 通过空间包含关系（ST_Contains）来计算一个点属于哪个区，而不是靠字段存储。</li>
+<li><strong>道路（Highway）</strong>：是线（Way）。道路名存储在 <code>name</code> 标签。</li>
+<li><strong>门牌（Housenumber）</strong>：大部分是离散的点（Node），少部分附着在建筑轮廓（Way）上。</li>
+<li><strong>POI</strong>：独立的点或多边形，与道路没有物理连接，只有空间相邻关系。</li>
+</ul>
+<p><strong>错位图示</strong>：</p>
+<div class="codehilite"><pre><span></span><code>[用户输入] &quot;北京朝阳区工体北路通盈中心&quot;
+      |
+      v
+[语义切分]
+
+1. &quot;北京&quot; (City) ---------&gt; 匹配 OSM Relation (admin_level=4)
+2. &quot;朝阳区&quot; (District) ---&gt; 匹配 OSM Relation (admin_level=6)
+3. &quot;工体北路&quot; (Road) -----&gt; 匹配 OSM Way (highway=primary)
+4. &quot;通盈中心&quot; (POI) ------&gt; 匹配 OSM Node/Way (name=通盈中心)
+      |
+      v
+[Nominatim 的困境]
+如果没有空格，Nominatim 可能会把 &quot;工体北路通盈中心&quot; 当作一个长单词去索引。
+如果 &quot;通盈中心&quot; 在 OSM 里没有记录 `addr:street=工体北路`，单纯搜文本可能因权重过低被过滤。
+</code></pre></div>
+
+<h3 id="22-the-normalization-pipeline">2.2 关键策略一：输入归一化管道 (The Normalization Pipeline)</h3>
+<p>在请求到达 Nominatim 之前，必须经过一层“清洗。这是低成本提升命中率的关键。不要指望 Nominatim 的分词器能完美处理中文杂乱输入。</p>
+<p><strong>管道设计建议</strong>：</p>
+<ol>
+<li>
+<p><strong>字符集清洗 (NFKC)</strong>：</p>
+<ul>
+<li>统一全角/半角：<code>ＡＢＣ</code> -&gt; <code>ABC</code>，<code>１２３</code> -&gt; <code>123</code>。</li>
+<li>统一标点：<code>（</code> -&gt; <code>(</code>，<code>＃</code> -&gt; <code>#</code>。</li>
+<li>去除无意义字符：<code>空格</code>、<code>\t</code>、<code>\n</code>（注意：英文地址需要保留空格，中文地址通常建议去除内部空格以辅助特定分词，或者统一替换为逗号）。</li>
+</ul>
+</li>
+<li>
+<p><strong>中文数字转写 (Digit Normalization)</strong>：</p>
+<ul>
+<li>虽然 Nominatim 内部有转换规则，但很难覆盖所有口语习惯。</li>
+<li>规则：<code>一号</code> -&gt; <code>1号</code>，<code>八十八号</code> -&gt; <code>88号</code>。</li>
+<li><em>Rule of Thumb</em>：只转换“号/弄/巷”前面的数字。不要转换路名中的数字（如“一汽大街”不能变成“1汽大街”）。</li>
+</ul>
+</li>
+<li>
+<p><strong>同义词/后缀标准化 (Synonym Expansion)</strong>：</p>
+<ul>
+<li>这是解决“搜不到路”的核心。</li>
+<li>建立映射表：<ul>
+<li><code>Rd</code>, <code>Lu</code> -&gt; <code>路</code></li>
+<li><code>Ave</code>, <code>Dadao</code> -&gt; <code>大道</code></li>
+<li><code>St</code>, <code>Jie</code> -&gt; <code>街</code></li>
+</ul>
+</li>
+<li><em>Gotcha</em>：小心“道”字，既可是“大道”的后缀，也可能是行政区“北海道”或“街道”的一部分。通常只替换结尾处的特定词。</li>
+</ul>
+</li>
+<li>
+<p><strong>去干扰词</strong>：</p>
+<ul>
+<li>用户常输入“我要去...”、“...附近”。检测并剥离这些非地址词汇。</li>
+</ul>
+</li>
+</ol>
+<h3 id="23-structured-query-strategy">2.3 关键策略二：结构化查询构建 (Structured Query Strategy)</h3>
+<p>Nominatim 提供了 <code>/search?q=...</code>（自由文本）和 <code>/search?street=...&amp;city=...</code>（结构化）两种模式。</p>
+<p><strong>极力推荐：混合查询策略（Hybrid Strategy）</strong></p>
+<p>不要把所有内容都塞进 <code>q</code> 参数。Nominatim 对 <code>q</code> 的解析非常消耗资源且容易误判。</p>
+<p><strong>算法流程</strong>：</p>
+<ol>
+<li>
+<p><strong>正则提取行政区</strong>：</p>
+<ul>
+<li>使用简单的正则库提取输入开头的 <code>省/市/区/县</code>。</li>
+<li>例如输入：“北京市海淀区丹棱街5号”。</li>
+<li>提取：<code>city=北京市</code>, <code>county=海淀区</code>。</li>
+<li>剩余：<code>丹棱街5号</code>。</li>
+</ul>
+</li>
+<li>
+<p><strong>构建第一次请求（精确结构化）</strong>：</p>
+<ul>
+<li><code>street=丹棱街5号</code></li>
+<li><code>city=北京市</code></li>
+<li><code>county=海淀区</code></li>
+<li><em>优点</em>：利用数据库索引，速度极快，结果极准。</li>
+</ul>
+</li>
+<li>
+<p><strong>构建第二次请求（降级/回退）</strong>：</p>
+<ul>
+<li>如果第一次返回空（常见原因：门牌号不匹配，或提取错误）。</li>
+<li>剥离门牌号，只查路：<code>street=丹棱街</code>, <code>city=...</code></li>
+<li><em>目的</em>：至少把用户导向正确的道路，而不是报错。</li>
+</ul>
+</li>
+<li>
+<p><strong>构建第三次请求（自由文本兜底）</strong>：</p>
+<ul>
+<li><code>q=北京市海淀区丹棱街5号</code></li>
+<li><code>viewbox=...</code> (如果已知用户大致位置)</li>
+<li><em>目的</em>：利用全文索引尝试模糊匹配。</li>
+</ul>
+</li>
+</ol>
+<h3 id="24">2.4 关键策略三：拼音与多语言处理</h3>
+<p>OSM 数据中包含大量 <code>name:en</code>, <code>name:pinyin</code> 标签，但 Nominatim 默认配置通常<strong>不索引</strong>所有拼音，或者索引方式不支持“首字母搜索”。</p>
+<p><strong>三种实现路径</strong>：</p>
+<p>| 方案 | 复杂度 | 原理 | 适用场景 |</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">方案</th>
+<th style="text-align: left;">复杂度</th>
+<th style="text-align: left;">原理</th>
+<th style="text-align: left;">适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>A. 前端转换 (推荐)</strong></td>
+<td style="text-align: left;">低</td>
+<td style="text-align: left;">在应用层将“Beij”转为汉字“北京”或“北井”，构建多个汉字 Query 并行请求。</td>
+<td style="text-align: left;">MVP，用户量不大，主要服务中文母语者。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>B. 辅助索引 (推荐)</strong></td>
+<td style="text-align: left;">中</td>
+<td style="text-align: left;">搭建一个 Elasticsearch，只存 POI 名称和拼音。用户输入拼音时，ES 返回 OSM ID，再通过 Nominatim <code>/lookup</code> 查详情。</td>
+<td style="text-align: left;">生产环境，要求高性能 Autocomplete。</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>C. 深度魔改</strong></td>
+<td style="text-align: left;">高</td>
+<td style="text-align: left;">修改 Nominatim 导入脚本，引入 <code>pinyin-tokenizer</code> 或 <code>pg_jieba</code>，重建数据库。</td>
+<td style="text-align: left;">极其依赖 OSM 纯栈，不想引入 ES 的团队。</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Rule of Thumb</strong>：不要试图在 PostGIS/Nominatim 里做复杂的模糊拼音匹配。它会让数据库 CPU 爆炸。把这个逻辑以前置（前端/中间层）或旁路（ES）的方式解决。</p>
+</blockquote>
+<h3 id="25-agent-disambiguation">2.5 关键策略四：歧义消解与 Agent 交互 (Disambiguation)</h3>
+<p>在 Navigation MCP 中，搜索不是终点，而是对话的点。</p>
+<p><strong>场景</strong>：用户对 Agent 说“导航去万达”。
+Nominatim 返回列表：</p>
+<ol>
+<li>通州万达广场 (Distance: 15km, Importance: 0.7)</li>
+<li>CBD万达广场 (Distance: 5km, Importance: 0.8)</li>
+<li>丰台万达广场 (Distance: 20km, Importance: 0.6)</li>
+</ol>
+<p><strong>Agent 工具链设计</strong>：</p>
+<p>不应直接返回 Top 1。MCP Tool 的返回 Schema 应该包含足够的信息供 LLM 判断是否需要“追问”。</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// Tool Response 示例</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ambiguous&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Found 3 high-confidence results.&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;candidates&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CBD万达广场&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;建国路93号, 朝阳区, 北京市&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// 结构化地址很重要</span>
+<span class="w">      </span><span class="nt">&quot;distance_km&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">5.0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mall&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;osm_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12345</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;通州万达广场&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;新华西街58号, 通州区, 北京市&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;distance_km&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">15.0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mall&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;osm_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">67890</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>LLM 的 Prompt 策略</strong>：</p>
+<ul>
+<li>如果 <code>status == ambiguous</code> 且 <code>distance</code> 差异巨大 -&gt; <strong>自动选择最近的</strong>（假设用户意图是就近）。</li>
+<li>如果 <code>status == ambiguous</code> 且 <code>distance</code> 相近 -&gt; <strong>发起澄清</strong>：“找到了两个万达广场，一个在建国路，一个在新华西街，您要去哪个？”</li>
+</ul>
+<hr />
+<h2 id="3">3. 本章小结</h2>
+<ul>
+<li><strong>OSM 的数据现状</strong>：中文地址在 OSM 中是碎片化的，不要指望完美匹配。</li>
+<li><strong>归一化是第一生产力</strong>：建立包含字符清洗、数字转写、正则提取的预处理管道，能解决 80% 的“搜不到”问题。</li>
+<li><strong>分层搜索策略</strong>：结构化搜索（精准） &gt; 剥离门牌搜索（保底） &gt; 自由文本搜索（模糊）。</li>
+<li><strong>Agent 的智慧在于“懂分寸”</strong>：通过设计包含 <code>address details</code> 和 <code>distance</code> 的 API 响应，让 LLM 具备像人一样区分同名地点的能力。</li>
+<li><strong>拼音处理</strong>：尽量在 Nominatim 外部解决（前端转换或 ES 旁路），避免拖累数据库性能。</li>
+</ul>
+<hr />
+<h2 id="4">4. 练习题</h2>
+<h3 id="_2">基础题</h3>
+<ol>
+<li><strong>API 对比实验</strong>：<ul>
+<li>找一个带门牌号的地址（如“北京市朝阳区工体北路4号”）。</li>
+<li>分别用 <code>q=...</code> 和 <code>street=...&amp;city=...</code> 发起请求。</li>
+<li>观察响应时间（<code>time</code> 字段）和执行计划（如果有权限看日志）的区别。</li>
+</ul>
+</li>
+<li><strong>归一化脚本</strong>：编写一个 Python 函数 <code>normalize_address(raw_text)</code>，实现：<ul>
+<li>全角转半角。</li>
+<li>移除所有空格。</li>
+<li>提取并移除末尾的“市/区”关键词作为 metadata 返回。</li>
+</ul>
+</li>
+<li><strong>结果解析</strong>：调用 Nominatim <code>/search</code> 接口，解析返回的 JSON。提取 <code>address</code> 字段，编写逻辑判断：如果结果中包含 <code>postcode</code>，则打印“精确到邮编区域”；如果只有 <code>state</code> 和 <code>country</code>，则打印“仅匹配到行政区”。</li>
+</ol>
+<details>
+<summary>点击查看提示 (Hints)</summary>
+<ul>
+<li><strong>题1提示</strong>：结构化搜索通常会直接命中索引，响应时间应在 50ms 以内；自由文本搜索涉及分词和排列组合，可能需要 200ms+。</li>
+<li><strong>题2提示</strong>：使用 <code>unicodedata.normalize('NFKC', text)</code> 处理全角。使用 <code>re.search</code> 提取行政区。</li>
+<li><strong>题3提示</strong>：检查 <code>address.postcode</code> 字段是否存在。注意 Nominatim 的 <code>address</code> 字段内容是动态的，取决于数据中有什么 tag。</li>
+</ul>
+</details>
+<h3 id="_3">挑战题</h3>
+<ol start="4">
+<li>
+<p><strong>构建“门牌回退”递归逻辑</strong>：</p>
+<ul>
+<li>设计一个伪代码函数 <code>smart_geocode(address)</code>。</li>
+<li>逻辑：先搜全量地址 -&gt; 若失败，正则去掉门牌号 -&gt; 再搜道路名 -&gt; 若成功，返回道路中心点，并标记 <code>accuracy_level: "street"</code>。</li>
+<li>思考：如何告知用户“我们没找到门牌，但把你导到了路上”？</li>
+</ul>
+</li>
+<li>
+<p><strong>LLM 澄清生成器</strong>：</p>
+<ul>
+<li>给定 Nominatim 返回的 3 个候选地点（包含 <code>display_name</code> 和 <code>class/type</code>）。</li>
+<li>编写一个 Prompt 模板，输入这些 JSON 数据，要求 LLM 输出一句自然语言，通过区分这三个地点的“行政区”或“周边地标”来询问用户。</li>
+<li>示例输入：<code>[{"name":"KFC", "district":"Haidian"}, {"name":"KFC", "district":"Chaoyang"}]</code></li>
+<li>期望输出：“您是指海淀区的肯德基，还是朝阳区的？”</li>
+</ul>
+</li>
+</ol>
+<details>
+<summary>点击查看提示 (Hints)</summary>
+<ul>
+<li><strong>题4提示</strong>：在 API 响应体中增加一个自定义字段 <code>meta</code>，包含 <code>match_type: "exact" | "street_fallback" | "city_fallback"</code>。前端或 Agent 根据这个字段决定话术。</li>
+<li><strong>题5提示</strong>：Prompt 需要包含指令：“Identify the distinguishing feature (like road name or district) in the provided candidates and formulate a clarification question.”</li>
+</ul>
+</details>
+<hr />
+<h2 id="5-gotchas">5. 常见陷阱与错误 (Gotchas)</h2>
+<h3 id="1osm-id">陷阱 1：OSM ID 的易变性</h3>
+<p><strong>现象</strong>：你缓存了某个地点的 <code>osm_id</code>（如 <code>node/12345</code>），一周后查询发现 ID 变了或失效了。
+<strong>原因</strong>：在 OSM 中，如果用户删除了一个点并新建了一个更完善的点，ID 会改变。或者编辑者将 Node 升级为 Way（例如给建筑物画了轮廓），ID 也会变。
+<strong>对策</strong>：不要将 OSM ID 作为永久的主键存储在业务数据库中。使用 <code>place_id</code>（Nominatim 内部 ID）也不完全保险。建议<strong>存储经纬度和名称</strong>，必要时重新 Geocode，或者定期通过 <code>/lookup</code> 刷新。</p>
+<h3 id="2-boundary">陷阱 2：高估了 <code>boundary</code> 的覆盖率</h3>
+<p><strong>现象</strong>：期望通过反向地理编码（Reverse Geocoding）获取用户所在的“街道/乡镇（Town/Village）”。
+<strong>现实</strong>：在中国，OSM 的 <code>admin_level=4</code>（省）和 <code>6</code>（地级市）覆盖较好，但 <code>8</code>（乡镇/街道）覆盖率极低。
+<strong>对策</strong>：业务逻辑不要强依赖“街道办”这一层级。如果必须要有，通常需要自建多边形图层进行空间关联（Point-in-Polygon），而不是依赖 Nominatim 的原生数据。</p>
+<h3 id="3-dedupe-poi">陷阱 3：由于 <code>dedupe</code> 导致的 POI 消失</h3>
+<p><strong>现象</strong>：搜“肯德基”，明明数据里有点（Node）也有房（Way），却只返回了一个。
+<strong>原因</strong>：Nominatim 默认有去重逻辑（Deduplication），如果两个同名对象距离很近，会合并显示
+<strong>对策</strong>：通常这是好特性。但在调试数据时，如果你需要看到所有原始数据，可以使用 <code>&amp;dedupe=0</code> 参数。</p>
+<h3 id="4_1">陷阱 4：坐标系漂移（火星坐标系）</h3>
+<p><strong>现象</strong>：搜出来的坐标在 OSM 底图上是对的，但在高德/百度/腾讯地图上显示偏了。
+<strong>原因</strong>：OSM 是 WGS84 坐标。国内商业地图使用 GCJ-02 或 BD-09。
+<strong>对策</strong>：作为 Navigation API，<strong>输入输出必须严格定义为 WGS84</strong>。如果客户端使用国内地图 SDK，必须在<strong>最前端</strong>（Client App）做坐标转换，严禁在后端 API 层混用坐标系，否则后续的路径规划（OSRM）会全部错乱。</p>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter5.html" class="nav-link prev">← 第5章｜Nominatim 部署与核心 API（search / reverse / lookup）</a><a href="chapter7.html" class="nav-link next">第7章｜路由引擎选型与路网建模（OSRM / GraphHopper / Valhalla 怎么选） →</a></nav>
+        </main>
+    </div>
+</body>
+</html>

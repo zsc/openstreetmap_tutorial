@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>第9章｜设计“面向业务”的 OSM 导航 API（把 Nominatim/OSRM 变成产品级接口）</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item " >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Nominatim & OpenStreetMap（OSM）导航 API 与 Navigation MCP 中文教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第1章｜全景与快速上手（从 0 跑通一次 geocode + route）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第2章｜OSM 数据模型与 ODbL 合规（底层拓扑与法律边界）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第3章｜OSM 数据获取、裁剪与增量更新（构建可持续的数据管道）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第4章｜PostGIS 与空间索引（地理查询的物理学）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第5章｜Nominatim 部署与核心 API（search / reverse / lookup）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第6章｜中文地址、POI 搜索与体验优化（让用户搜得到、搜得准）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第7章｜路由引擎选型与路网建模（OSRM / GraphHopper / Valhalla 怎么选）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第8章｜OSRM 实战：从 OSM 数据到路由服务（含 Match/Table/Trip）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item active" >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第9章｜设计“面向业务”的 OSM 导航 API（把 Nominatim/OSRM 变成产品级接口）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第10章｜生产化：性能、更新、监控、成本与合规</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第11章｜LLM Toolcall & Agent：导航工具设计、澄清策略与可靠执行</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="9-osm-api-nominatimosrm">第9章｜设计“面向业务”的 OSM 导航 API（把 Nominatim/OSRM 变成产品级接口）</h1>
+<h2 id="1">1. 开篇段落</h2>
+<p>在企业级架构或 MCP（Model Context Protocol）体系中，直接暴露底层的 Nominatim 或 OSRM 接口是架构上的“反模式”。底层引擎关注的是“图算法”和“索引查询”，而上层业务关注的是“地点”、“行程”和“异常处理”。</p>
+<p>本章的目标是构建一个 <strong>Facade API（外观模式层）</strong>。将学习如何定义通用的<strong>资源模型（Resource Model）</strong>，制定严格的<strong>坐标与单位规范</strong>，设计支持<strong>多模态（GET/POST）</strong>的路由接口，并建立一套能让 LLM 理解的<strong>错误反馈机制</strong>。无论底层是 OSRM、Valhalla 还是 Google Maps，这层 API 协议都应保持不变。这不仅是为了解耦，更是为了让你的 Navigation MCP 能够稳定运行。</p>
+<hr />
+<h2 id="2">2. 文字论述</h2>
+<h3 id="21-facade-api">2.1 为什么要设计 Facade API（中间层架构）</h3>
+<p>在将导航能力接入 LLM Agent 时，我们面临三个核心挑战：</p>
+<ol>
+<li><strong>协议碎片化</strong>：Nominatim 返回 XML/JSON，OSRM 返回 GeoJSON + 自定义注解。Agent 需要统一的 Schema。</li>
+<li><strong>上下文缺失</strong>：底层引擎不保留状态。例如，OSRM 不知道“家”在哪里，它只认坐标。Facade 层需要处理“别名解析”。</li>
+<li><strong>容错性差</strong>：当 OSRM 返回 <code>NoRoute</code> 时，它不会告诉你是因为“起点在海里”还是“终点在步行街”。Facade 层需要通过空间析（PostGIS）补充错误上下文，告诉 Agent 如何修正。</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="nb">+-----------------------+</span><span class="c">       </span><span class="nb">+-----------------------------+</span>
+<span class="c">| LLM Agent / Mobile App|       |      Navigation Facade      |</span>
+<span class="c">| (Client)              | </span><span class="nv">&lt;</span><span class="nb">---</span><span class="nv">&gt;</span><span class="c"> |      (API Gateway)          |</span>
+<span class="nb">+-----------------------+</span><span class="c">       </span><span class="nb">+--------------+--------------+</span>
+<span class="c">                                               |</span>
+<span class="c">         </span><span class="nb">+-------------------------------------+----------------------------------+</span>
+<span class="c">         |                     |                       |                          |</span>
+<span class="nb">+--------</span><span class="c">v</span><span class="nb">-------+</span><span class="c">    </span><span class="nb">+--------</span><span class="c">v</span><span class="nb">----------+</span><span class="c">    </span><span class="nb">+-------</span><span class="c">v</span><span class="nb">-------+</span><span class="c">          </span><span class="nb">+-------</span><span class="c">v</span><span class="nb">-------+</span>
+<span class="c">|  Nominatim     |    |   OSRM (Driving)  |    | OSRM (Biking) |          | PostGIS (DB)  |</span>
+<span class="c">| (Raw Geocoder) |    |  (Routing Engine) |    | (Routing Eng) |          | (Auth/Cache)  |</span>
+<span class="nb">+----------------+</span><span class="c">    </span><span class="nb">+-------------------+</span><span class="c">    </span><span class="nb">+---------------+</span><span class="c">          </span><span class="nb">+---------------+</span>
+</code></pre></div>
+
+<h3 id="22-the-resource-model">2.2 核心资源模型设计（The Resource Model）</h3>
+<p>为了保证 API 的长期演进，必须定义标准化的“名词”。不要在 API 中混用 <code>lat</code>、<code>latitude</code>、<code>y</code>。</p>
+<h4 id="221-coordinate-atom">2.2.1 坐标原子（Coordinate Atom）</h4>
+<p><strong>Rule-of-Thumb（坐标黄金法则）</strong>：</p>
+<ol>
+<li><strong>输入/输出</strong>：强制使用 <strong><code>[longitude, latitude]</code></strong> 数组格式（GeoJSON 标准）。</li>
+<li><strong>精度控制</strong>：在 API 层强制截断为 <strong>6位小数</strong>（约 0.11米精度）。7位以上是测量噪声，只会破坏缓存命中率。</li>
+<li><strong>命名约定</strong>：如果在对象中使用，必须叫 <code>lon</code> 和 <code>lat</code>。</li>
+</ol>
+<h4 id="222-location-object">2.2.2 地点对象（Location Object）</h4>
+<p>不要只返回一个坐标，要返回一个“对象”。</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// Location Schema 定义</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;osmid_12345_node&quot;</span><span class="p">,</span><span class="w">      </span><span class="c1">// 唯一标识，用于反查</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;北京大兴国际机场&quot;</span><span class="p">,</span><span class="w">      </span><span class="c1">// 最佳显示名</span>
+<span class="w">  </span><span class="nt">&quot;point&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">116.4105</span><span class="p">,</span><span class="w"> </span><span class="mf">39.5097</span><span class="p">],</span><span class="w">  </span><span class="c1">// 统一坐标</span>
+<span class="w">  </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">                   </span><span class="c1">// 结构化地址（可选，按需返回）</span>
+<span class="w">    </span><span class="nt">&quot;city&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;北京市&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;district&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;大兴区&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;aerodrome&quot;</span><span class="p">,</span><span class="w">           </span><span class="c1">// 业务分类（映自 OSM tags）</span>
+<span class="w">  </span><span class="nt">&quot;confidence&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.95</span><span class="w">             </span><span class="c1">// 匹配置信度（对搜索很重要）</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h4 id="223-route-object">2.2.3 路线对象（Route Object）</h4>
+<p>OSRM 的原始返回非常庞大，包含大量几何点。Facade API 应提供简化版，仅当 <code>details=full</code> 时才返回完整几何。</p>
+<ul>
+<li><strong><code>summary</code></strong>：摘要（距离、时间、路况）。</li>
+<li><strong><code>geometry</code></strong>：建议使用 <strong>Polyline Algorithm</strong> 编码字符串（如 <code>_p~iF~ps|U_ulLnnqC_mqNvxq</code>），将几十 KB 的坐标数组压缩为几百字节，大幅降低传输延迟和 Token 消耗。</li>
+<li><strong><code>legs</code></strong>：分段信息（途经点之间的路段）。</li>
+<li><strong><code>instructions</code></strong>：文本化的导航指令（给人类读，或给 LLM 朗读）。</li>
+</ul>
+<hr />
+<h3 id="23-api-endpoints">2.3 关键端点设计（API Endpoints）</h3>
+<p>我们将 API 分为三个核心能力域：<strong>G（Geocoding）、R（Routing）、S（Spatial Analysis）</strong>。</p>
+<h4 id="231-v1geocode">2.3.1 地理编码域：<code>/v1/geocode</code></h4>
+<ul>
+<li>
+<p><strong>GET <code>/v1/geocode/search</code></strong></p>
+<ul>
+<li><strong>核心参数</strong>：<ul>
+<li><code>q</code> (string): 自由文本。</li>
+<li><code>bias_point</code> (coord): 偏置坐标（优先搜索该点附近）。</li>
+<li><code>filter</code> (string): 类别过滤，如 <code>category:restaurant</code>。</li>
+</ul>
+</li>
+<li><strong>设计陷阱</strong>：不要透传 Nominatim 的 <code>viewbox</code> 参数，设计者应该将其封装为更易懂的 <code>region</code> 或 <code>city_code</code> 参数。</li>
+</ul>
+</li>
+<li>
+<p><strong>GET <code>/v1/geocode/reverse</code></strong></p>
+<ul>
+<li><strong>核心参数</strong>：<code>point</code> (coord), <code>layers</code> (address | poi | road)。</li>
+<li><strong>业务逻辑</strong>：OSM 原生反查通常返回最近的任何对象。业务 API 应该允许用户指定：“我只要最近的<strong>道路</strong>”或“我只要所在的<strong>行政区</strong>”。</li>
+</ul>
+</li>
+</ul>
+<h4 id="232-v1route">2.3.2 路由域：<code>/v1/route</code></h4>
+<ul>
+<li><strong>POST <code>/v1/route/directions</code></strong> (推荐使用 POST)<ul>
+<li><strong>设计理由</strong>：GET 请求 URL 长度有限。当请求包含 50 个途经点（TSP 问题）或复杂的避让区域（Polygons）时，必须用 POST。</li>
+<li><strong>Request Schema</strong>:</li>
+</ul>
+</li>
+</ul>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;waypoints&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;point&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">116.3</span><span class="p">,</span><span class="w"> </span><span class="mf">39.9</span><span class="p">],</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;break&quot;</span><span class="p">},</span><span class="w">  </span><span class="c1">// 必停点</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;point&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">116.4</span><span class="p">,</span><span class="w"> </span><span class="mf">39.8</span><span class="p">],</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;through&quot;</span><span class="p">}</span><span class="w"> </span><span class="c1">// 途经点（不停车，仅用于塑形）</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;profile&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;driving-car&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// 模式：驾车、骑行、步行</span>
+<span class="w">  </span><span class="nt">&quot;preference&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fastest&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// 偏好：最快、最短、经济</span>
+<span class="w">  </span><span class="nt">&quot;exclude&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;toll&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;ferry&quot;</span><span class="p">],</span><span class="w"> </span><span class="c1">// 避让：收费、轮渡</span>
+<span class="w">  </span><span class="nt">&quot;options&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;geometry_format&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;polyline6&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<ul>
+<li><strong>POST <code>/v1/route/matrix</code></strong><ul>
+<li><strong>功能</strong>：计算 N x M 的时距矩阵（不返回几何路线）。</li>
+<li><strong>场景</strong>：派单系统、最近门店查找。</li>
+<li><strong>性能警示</strong>：务必在 API 层限制 N 和 M 的大小（例如 <code>N*M &lt;= 2500</code>），防止 OSRM 内存爆炸。</li>
+</ul>
+</li>
+</ul>
+<h4 id="233-v1spatial">2.3.3 空间分析域：<code>/v1/spatial</code></h4>
+<ul>
+<li><strong>POST <code>/v1/spatial/match</code> (Map Matching)</strong><ul>
+<li><strong>功能</strong>：将原始 GPS 轨迹“吸附”到路网上。</li>
+<li><strong>输出</strong>：除了修正后的坐标，<strong>必须返回 <code>tracepoints</code> 的元数据</strong>，特别是 <code>waypoint_index</code>（对应输入的第几个点）和 <code>matchings_confidence</code>。</li>
+<li><strong>Gotcha</strong>：如果中间有一段轨迹缺失（如隧道），OSRM 可能会“猜”一条路。API 需要标记这段是“推测（interpolated）”还是“匹配（matched）”。</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h3 id="24-api">2.4 动力学与几何近似的 API 表达</h3>
+<p>导航不仅是几何连线，还涉及物理世界的限制。API 必须显式表达这些概念。</p>
+<ol>
+<li><strong>Ghost Start / Snapping (幽灵起点)</strong><ul>
+<li><strong>问题</strong>：用户在公园内部（无车行道）发起“驾车”导航。</li>
+<li><strong>处理</strong>：引擎会将起点吸附到最近的公路（距离 200米）。</li>
+<li><strong>API 响应</strong>：</li>
+</ul>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;query_point&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">116.300</span><span class="p">,</span><span class="w"> </span><span class="mf">39.900</span><span class="p">],</span><span class="w">   </span><span class="c1">// 用户点的</span>
+<span class="w">  </span><span class="nt">&quot;snapped_point&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">116.302</span><span class="p">,</span><span class="w"> </span><span class="mf">39.901</span><span class="p">],</span><span class="w"> </span><span class="c1">// 实际规划起点</span>
+<span class="w">  </span><span class="nt">&quot;snapping_distance_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">250</span><span class="w">          </span><span class="c1">// 偏差距离</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="k">*</span>   **作用**：LLM 可以据此提示用户：“导航将从 250 米外的 xx 路开始，请先前往那里。”
+</code></pre></div>
+
+<ol start="2">
+<li><strong>Time Window (时间窗)</strong><ul>
+<li>OSRM 支持基于时间段的限行（例如 <code>conditional_access</code>）。</li>
+<li>API 请求应包含 <code>departure_time</code> (ISO 8601)。如果为空，默认为 <code>now</code>。这决定了是否避开早晚高峰禁行路段。</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h3 id="25-agent">2.5 错误模型：让 Agent 知道该怎么办</h3>
+<p>HTTP 状态码不足以表达导航业务错误。你需要定义 <strong><code>error_code</code></strong> 和 <strong><code>resolution_hint</code></strong>。</p>
+<p>| HTTP | error_code | 含义 | 给 Agent 的建议 (resolution_hint) |</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">HTTP</th>
+<th style="text-align: left;">error_code</th>
+<th style="text-align: left;">含义</th>
+<th style="text-align: left;">给 Agent 的建议 (resolution_hint)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">422</td>
+<td style="text-align: left;"><code>ROUTE_NOT_FOUND</code></td>
+<td style="text-align: left;">两点间物理不可达</td>
+<td style="text-align: left;">检查是否有跨海、跨国界或进入了封闭区域（如军事区）。</td>
+</tr>
+<tr>
+<td style="text-align: left;">422</td>
+<td style="text-align: left;"><code>START_POINT_ISOLATED</code></td>
+<td style="text-align: left;">起点无法吸附到道路</td>
+<td style="text-align: left;">起点可能在荒漠或水域，建议扩大搜索半径或更改出行模式（驾车-&gt;步行）。</td>
+</tr>
+<tr>
+<td style="text-align: left;">400</td>
+<td style="text-align: left;"><code>WAYPOINTS_LIMIT_EXCEEDED</code></td>
+<td style="text-align: left;">途经点太多</td>
+<td style="text-align: left;">将请求拆分为多个子航段。</td>
+</tr>
+<tr>
+<td style="text-align: left;">429</td>
+<td style="text-align: left;"><code>RATE_LIMIT_EXCEEDED</code></td>
+<td style="text-align: left;">限流</td>
+<td style="text-align: left;">指数退避重试。</td>
+</tr>
+<tr>
+<td style="text-align: left;">503</td>
+<td style="text-align: left;"><code>ENGINE_BUILDING</code></td>
+<td style="text-align: left;">数据在更新</td>
+<td style="text-align: left;">稍后重试（系统维护中）。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>LLM Friendly Error 示例</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ROUTE_NOT_FOUND&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Cannot find route between point A and B.&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;details&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DifferentComponents&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// OSRM 术语，意为孤岛</span>
+<span class="w">      </span><span class="nt">&quot;hint&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Start point is on an island without bridges. Try mode=&#39;ferry&#39; or check coordinates.&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<hr />
+<h3 id="26">2.6 安全、限流与元数据</h3>
+<ul>
+<li><strong>Request ID &amp; Trace ID</strong>：每个请求必须分配 UUID，贯穿 Nginx -&gt; Facade -&gt; OSRM。日志中必须能串联。</li>
+<li><strong>Rate Limiting</strong>：<ul>
+<li><strong>基于计算量限流</strong>：Matrix 接口的权重应是 Simple Route 的 10 倍。不要只限制 QPS，要限制“计算单元”。</li>
+<li><strong>Header</strong>：返回 <code>X-RateLimit-Remaining</code>，让 Agent 知道是否需要减速。</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2 id="3">3. 本章小结</h2>
+<ul>
+<li><strong>Facade 即使命</strong>：Facade API 存在的意义是将“地理数据问题”转化为“业务逻辑交互”，屏蔽底层的复杂性。</li>
+<li><strong>坐标铁律</strong>：永远使用 <code>[lon, lat]</code> 数组，并控制在 6 位小数。</li>
+<li><strong>显式吸附</strong>：总是告诉调用者“我实际从哪里开始规划的”，这是解决“导航起点不准”投诉的关键。</li>
+<li><strong>错误可解释</strong>：不要只扔出 404，要用错误码指导 Agent 是“换个点”、“换个模式”还是“拆分请求”。</li>
+<li><strong>动词选择</strong>：简单查询用 GET，复杂规划与矩阵计算用 POST。</li>
+</ul>
+<hr />
+<h2 id="4">4. 练习题</h2>
+<p><strong>基础题</strong></p>
+<ol>
+<li><strong>JSON 构造</strong>：请编写一个 <code>/v1/route/directions</code> 的 POST 请求体示例，要求：从“北京西站”到“天安门”，中间途经“军事博物馆”，出行模式为“骑行”，且要求返回详细的导航文本指令。</li>
+<li><strong>精度计算</strong>：如果 API 不做截断，传入了 10 位小数的坐标。请计算 0.0000000001 度在赤道上大约代表多少毫米？这对 OSRM 的缓存机制有什么坏处？</li>
+<li><strong>吸附逻辑</strong>：用户在一条跨江大桥的<strong>下方</strong>（河岸公园）请求导航。GPS 坐（二维）看起来是在桥上。Facade API 应该如何通过参数（如 <code>radiuses</code> 或 <code>bearings</code>）协助 OSRM 区分“桥上”和“桥下”？</li>
+</ol>
+<p><strong>挑战题</strong></p>
+<ol start="4">
+<li>
+<p><strong>接口幂等与缓存键设计</strong>：
+    为了节省 OSRM 算力，你在 Facade 层实现了 Redis 缓存。对于 POST 请求，你需要生成一个 Cache Key。请设计一个算法，将 JSON Body 转化为唯一的 Key。</p>
+<ul>
+<li><em>提示：字段顺序不同（{"a":1, "b":2} vs {"b":2, "a":1}）应该生成相同的 Key 吗？坐标 <code>116.3000001</code> 和 <code>116.3</code> 应该命中同一个 Key 吗？</em>
+5.  <strong>多模态混合路由设计</strong>：
+Agent 想要规划“先骑行到地铁站，再坐地铁，最后步行”的路线。目前的 OSRM 实例通常是单模式（只有车或只有步行）。请构思 Facade API 如何通过编排多次 OSRM 调用和一次 Public Transit API（如 GTFS）调用来实现此功能，并设计响应结构。</li>
+</ul>
+</li>
+<li>
+<p><strong>隐私脱敏</strong>：
+    作为 API 提供方，你需要在日志中记录用户的起终点以便 Debug，但不能泄露用户隐私。请提出一种针对地理坐标的日志脱敏方案。</p>
+</li>
+</ol>
+<details>
+<summary>点击查看练习题提示 (Hints)</summary>
+<ol>
+<li><em>提示：注意 <code>waypoints</code> 数组的顺序；<code>mode</code> 应为 <code>cycling</code>；<code>steps=true</code>。</em></li>
+<li><em>提示：赤道周长约 40000km。1度 ≈ 111km。10位小数是原子级别的精度。这会导致几乎所有的请求 Hash 都不同，缓存命中率降为 0。</em></li>
+<li><em>提示：利用 OSRM 的 <code>bearings</code>（指定起点的行进方向）或在应用层先判断用户是否在桥的投影范围内，结合高度信息（如果 GPS 有）或用户手动选择。</em></li>
+<li><em>提示：先对 Object 进行 Key 排序，再序列化；对坐标进行 Round(6) 处理。使用 Canonical JSON 方案。</em></li>
+<li><em>提示：Facade 需要将其拆解为：Route(A-&gt;Station1, bike) + Transit(Station1-&gt;Station2) + Route(Station2-&gt;B, foot)。响应中需包含 <code>segments</code> 数组，每个 segment 有不同的 <code>mode</code>。</em></li>
+<li><em>提示：GeoHash 截断（保留前5位），或者对坐标保留 2 位小数（城市级别精度）。</em></li>
+</ol>
+</details>
+<hr />
+<h2 id="5-gotchas">5. 常见陷阱与错误 (Gotchas)</h2>
+<h3 id="51">5.1 默认速度的陷阱</h3>
+<ul>
+<li><strong>问题</strong>：用户抱怨 ETA（预计到达时间）极其不准。</li>
+<li><strong>原因</strong>：OSRM 默认使用的 <code>car.lua</code> 配置文件中，各级道路速度是静态的（如 highway=primary 默认为 60km/h）。在城市拥堵路段这太快了，在高速空闲路段又太慢了。</li>
+<li><strong>Facade 对策</strong>：不要盲信 OSRM 的 <code>duration</code>。Facade 层应允许接入简单的线性修正公式（如 <code>duration * 1.2</code>）或对接实时路况系数。</li>
+</ul>
+<h3 id="52-country_code">5.2 忽略 <code>country_code</code></h3>
+<ul>
+<li><strong>问题</strong>：在欧洲边境或行政区划复杂地区，地理编码搜索“Cambridge”可能返回英国的，也可能返回美国的。</li>
+<li><strong>对策</strong>：API 必须提供 <code>country_codes</code> 参数（ISO 3166-1 alpha-2），并强烈建议 Client 传该参数。</li>
+</ul>
+<h3 id="53-polyline">5.3 Polyline 的精度丢失</h3>
+<ul>
+<li><strong>问题</strong>：前端解码 Polyline 后，发现路线在地图上呈锯状，甚至切过了建筑物。</li>
+<li><strong>原因</strong>：标准的 Google Polyline Algorithm 只有 5 位小数精度（约 1 米）。对于高精地图或复杂的立交桥，这不够。</li>
+<li><strong>对策</strong>：OSRM 支持 <code>polyline6</code>（6位精度）。务必在 options 中明确指定使用哪种编码，并在文档中告知 Client。</li>
+</ul>
+<h3 id="54">5.4 所有的路看起来都一样</h3>
+<ul>
+<li><strong>问题</strong>：指令返回 "Turn right"，但没说是“向右转进入辅路”还是“向右转进入高速”。</li>
+<li><strong>对策</strong>：OSRM 的 response 中包含 <code>modifier</code> 字段（如 <code>slight right</code>, <code>sharp right</code>）。API 层应透传这些修饰符，这对语音播报至关重要。</li>
+</ul>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter8.html" class="nav-link prev">← 第8章｜OSRM 实战：从 OSM 数据到路由服务（含 Match/Table/Trip）</a><a href="chapter10.html" class="nav-link next">第10章｜生产化：性能、更新、监控、成本与合规 →</a></nav>
+        </main>
+    </div>
+</body>
+</html>

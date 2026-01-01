@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>第4章｜PostGIS 与空间索引（地理查询的物理学）</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item " >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Nominatim & OpenStreetMap（OSM）导航 API 与 Navigation MCP 中文教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第1章｜全景与快速上手（从 0 跑通一次 geocode + route）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第2章｜OSM 数据模型与 ODbL 合规（底层拓扑与法律边界）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第3章｜OSM 数据获取、裁剪与增量更新（构建可持续的数据管道）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item active" >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第4章｜PostGIS 与空间索引（地理查询的物理学）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第5章｜Nominatim 部署与核心 API（search / reverse / lookup）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第6章｜中文地址、POI 搜索与体验优化（让用户搜得到、搜得准）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第7章｜路由引擎选型与路网建模（OSRM / GraphHopper / Valhalla 怎么选）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第8章｜OSRM 实战：从 OSM 数据到路由服务（含 Match/Table/Trip）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第9章｜设计“面向业务”的 OSM 导航 API（把 Nominatim/OSRM 变成产品级接口）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第10章｜生产化：性能、更新、监控、成本与合规</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第11章｜LLM Toolcall & Agent：导航工具设计、澄清策略与可靠执行</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="4postgis">第4章｜PostGIS 与空间索引（地理查询的物理学）</h1>
+<h2 id="41-postgis-nominatim">4.1 开篇段落：PostGIS 是 Nominatim 的心脏</h2>
+<p>在构建 OSM 导航栈时，许多开发者容易将数据库视为一个“存数据的黑盒”，认为只要导入了 OSM 数据，查询自然就会快。这是一个危险的误区。Nominatim 和 OSRM 的底层逻辑截然不同：OSRM 将路网加载到内存中构建图（Graph），而 Nominatim（以及大多数自定义 POI 搜索服务）完全依赖 <strong>PostgreSQL + PostGIS</strong> 进行磁盘上的几何运算。</p>
+<p>当你的 Agent 试图调用工具查找“距离当前位置最近的充电站”时，PostGIS 内部发生的不是简单的查表，而是复杂的计算几何过程。如果不懂 <strong>SRID</strong>、<strong>GiST 索引分裂机制</strong>以及<strong>执行计划器（Planner）的脾气</strong>，你的服务很容易在面对“北京周边”这种高密度数据查询时，从 20ms 劣化到 5s 甚至超时。</p>
+<p>本章的学习目标：</p>
+<ol>
+<li><strong>彻底理解坐标系（SRID）</strong>：为什么 4326 和 3857 混用会导致灾难，以及何时该用哪一个。</li>
+<li><strong>解剖 GiST 索引</strong>：不仅知道它存了 BBOX，还要知道它是如何生长、分裂和腐烂的。</li>
+<li><strong>掌握空间查询的两步法</strong>：Filter（粗筛）与 Refine（精筛）的底层逻辑。</li>
+<li><strong>学会读懂 Explain</strong>：在地理查询中，什么样的执行计划意味着“危险”。</li>
+</ol>
+<hr />
+<h2 id="42">4.2 文字论述</h2>
+<h3 id="421-srid">4.2.1 核心世界观：SRID、投影与变形</h3>
+<p>PostGIS 中的所有几何体必须依附于一个 <strong>SRID (Spatial Reference System Identifier)</strong>。在导航领域，你必须形成下意识的“双轨制”思维。</p>
+<h4 id="1-epsg4326-wgs-84">1. 存储标准：EPSG:4326 (WGS 84)</h4>
+<ul>
+<li><strong>物理本质</strong>：这是一个椭球体模型。坐标是 <code>(经度, 纬度)</code>，单位是“度”。</li>
+<li><strong>OSM 的原生形态</strong>：OpenStreetMap 数据库中的 node 也就是存的这个。</li>
+<li><strong>陷阱</strong>：“度”不是长度单位。在赤道，1度 ≈ 111km；在瑞典，1度可能只有 50km。</li>
+<li><strong>应用场景</strong>：<strong>数据存储</strong>、<strong>人机交互</strong>（输入输出）、<strong>LLM Toolcall 参数</strong>。</li>
+</ul>
+<h4 id="2-epsg3857-web-mercator">2. 计算/渲染标准：EPSG:3857 (Web Mercator)</h4>
+<ul>
+<li><strong>物理本质</strong>：这是一个将地球强行展开的平面投影。坐标是 <code>(X, Y)</code>，单位是“米”。</li>
+<li><strong>陷阱</strong>：<strong>面积与距离随纬度剧烈变形</strong>。格陵兰岛在地图上看起来跟非洲一样大，实际小得多。这意味着在 3857 坐标系下直接画圈搜索（Buffer），在高纬度地区会覆盖比预期大得多的真实面积。</li>
+<li><strong>应用场景</strong>：<strong>切片地图（Slippy Map）显示</strong>、<strong>局部范围内的简单欧氏距离计算</strong>。</li>
+</ul>
+<p><strong>Rule-of-Thumb经验法则）</strong>：</p>
+<blockquote>
+<p><strong>“存储用 4326，计算转 Geography，渲染切片才用 3857”</strong></p>
+<ul>
+<li>不要在数据库里存 3857，每次转换会有精度损失。</li>
+<li>不要试图在 4326 上用勾股定理算距离。</li>
+<li>如果你需要“搜索半径 5km”，请使用 PostGIS 的 <code>Geography</code> 类型自动处理投影。</li>
+</ul>
+</blockquote>
+<h3 id="422-geometry-vs-geography">4.2.2 数据类型抉择：Geometry vs Geography</h3>
+<p>这是初学者最容易纠结的地方。Nominatim 选择了 <strong>Geometry</strong>，为什么？</p>
+<p>| 特性 | Geometry (几何) | Geography (地理) |</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">特性</th>
+<th style="text-align: left;">Geometry (几何)</th>
+<th style="text-align: left;">Geography (地理)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>数学模型</strong></td>
+<td style="text-align: left;">笛卡尔平面 (X, Y)</td>
+<td style="text-align: left;">球体/椭球体 (Lat, Lon)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>计算复杂度</strong></td>
+<td style="text-align: left;">低 (CPU 友好)</td>
+<td style="text-align: left;">高 (涉及大量三角函数)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>跨越 180°经线</strong></td>
+<td style="text-align: left;">需要特殊处理 (Shift/Wrap)</td>
+<td style="text-align: left;">自动处理 (原生支持)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>函数支持</strong></td>
+<td style="text-align: left;">全面</td>
+<td style="text-align: left;">有限 (很多函数不支持)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>索引效率</strong></td>
+<td style="text-align: left;">极高</td>
+<td style="text-align: left;">略低</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Nominatim 的策略分析</strong>：
+Nominatim 甚至 OSRM 的后端数据库，通常使用 <strong>Geometry (EPSG:4326)</strong> 存储。</p>
+<ul>
+<li><strong>原因</strong>：OSM 数据量极大（数百亿行）。Geography 的计算开销太昂贵。</li>
+<li><strong>妥协</strong>：当需要计算距离时，通常使用 <code>ST_Distance(geom::geography, ...)</code> 进行即时转换，或者在小范围内假设平面进行近似计算。</li>
+</ul>
+<h3 id="423-gist">4.2.3 动力学建模：GiST 索引的内部机制</h3>
+<p>普通的 B-Tree 索引（用于 ID、数字）是一维的，易于排序。地理数据是二维甚至多维的，无法简单排序。PostGIS 使用 <strong>GiST (Generalized Search Tree)</strong>，其核心实现通常是 <strong>R-Tree (Region Tree)</strong>。</p>
+<h4 id="1-r-tree-nesting-bounding-boxes">1. R-Tree 的核心：包围盒嵌套 (Nesting Bounding Boxes)</h4>
+<p>索引不存储复杂的街道形状，只存储街道的 <strong>MBR (Minimum Bounding Rectangle，最小外包矩形)</strong>。</p>
+<div class="codehilite"><pre><span></span><code>    层级结构图解 (R-Tree)
+
+    [ 根节点 (覆盖整个城市) ---------------------------------------]
+       |
+       +--- [ 子节点 A (海淀区) ]           [ 子节点 B (朝阳区) ]
+       |       |                               |
+       |       +--- [ 叶节点 1 (某街道) ]      +--- [ 叶节点 3 ]
+       |       |       (实际数据指针)             (实际数据指针)
+
+       |       |       (实际数据指针)             (实际数据指针)
+       |       |
+       |       +--- [ 叶节点 2 (某公园) ]
+       |
+
+       +--- [ 子节点 C (重叠区域) ] ...
+</code></pre></div>
+
+<h4 id="2">2. 索引的动力学特征</h4>
+<ul>
+<li><strong>重叠 (Overlap) 是性能杀手</strong>：与 B-Tree 不同，R-Tree 的分支是可以空间重叠的。如果一条路横跨了海淀和朝阳，查询这两个区域都可能遍历到这条路。如果索引构建得不好（重叠率高），查询就会退化为全表扫描。</li>
+<li><strong>分裂 (Split)</strong>：当插入新数据，某个节点的 BBOX 满了，索引需要分裂。PostGIS 采用多种算法（如 Guttman, Linear, Quadratic）来决定怎么切分，目的是尽量减少重叠，让 BBOX 尽可能“方”且“小”。</li>
+<li><strong>膨胀 (Bloat)</strong>：OSM 数据频繁更新（Diff update）会导致索引产生大量“死节点”。GiST 索引对膨胀非常敏感。<strong>定期 <code>REINDEX</code> 对于维持航 API 的性能至关重要。</strong></li>
+</ul>
+<h3 id="424-filter-refine">4.2.4 查询执行流：Filter &amp; Refine（粗筛与精筛）</h3>
+<p>当你发送一个 SQL：<code>SELECT * FROM pois WHERE ST_DWithin(geom, point, 1000)</code>，PostGIS 实际上在做两件事：</p>
+<p><strong>第一步：索引扫描 (Index Scan) —— 粗筛</strong></p>
+<ul>
+<li><strong>操作符</strong>：<code>&amp;&amp;</code> (Bounding Box Overlap)。</li>
+<li><strong>逻辑</strong>：只比较矩形。只要目标的 BBOX 和索引里的 BBOX 哪怕碰了一点边，就算命中。</li>
+<li><strong>速度</strong>：极快。</li>
+<li><strong>结果</strong>：一组“候选者 (Candidates)”。其中包含很多“假阳性”结果（例如：点在矩形角里，但不在圆形半径内）。</li>
+</ul>
+<p><strong>第二步：精确计算 (Heap Fetch &amp; Recheck) —— 精筛</strong></p>
+<ul>
+<li><strong>函数</strong>：<code>ST_Distance</code> (真实几何计算)。</li>
+<li><strong>逻辑</strong>：去磁盘读取真实的 Geometry 数据（可能几千个顶点的多边形），解压，算数学距离。</li>
+<li><strong>速度</strong>：慢，CPU 密集。</li>
+<li><strong>结果</strong>：最终精准结果。</li>
+</ul>
+<p><strong>常见陷阱</strong>：
+如果你写 <code>WHERE ST_Distance(geom, p) &lt; 100</code>，PostGIS 默认<strong>不会</strong>使用索引（除非是新版本且有特殊配置），因为它是一个函数调用。
+<strong>必须使用</strong> <code>ST_DWithin</code>，因为它被设计为自动展开成 <code>geom &amp;&amp; BBOX(p, 100) AND ST_Distance(geom, p) &lt; 100</code>。</p>
+<h3 id="425-clustering">4.2.5 聚簇 (Clustering)：让物理存储服从地理分布</h3>
+<p>在 Nominatim 的 <code>placex</code> 表中，数据默认可能是按“插入时间”排序的。这意味着：</p>
+<ul>
+<li>第 1 行是北京的数据。</li>
+<li>第 2 行可能是上海的数据（因为是下一秒同步进来的）。</li>
+</ul>
+<p>当你查询“北京的所有加油站”时，硬盘磁头需要在磁盘的不同位置疯狂跳跃（Random I/O），这是机械硬盘时代的噩梦，在 SSD 时代依然消耗 IOPS。</p>
+<p><strong>CLUSTER 命令</strong>：
+<code>CLUSTER placex USING idx_placex_geometry;</code>
+这个命令会重写整张表，<strong>强制把地理位置相近的数据，在物理硬盘上也挨在一起存</strong>。这能极大地提升“范围搜索”的性能，因为一次 I/O 读取的 Page 包含了更多相关数据。</p>
+<hr />
+<h2 id="43">4.3 本章小结</h2>
+<ol>
+<li><strong>SRID 隔离</strong>：严格区分存储 (4326) 和 计算 (Geography/Projected)。不要混用。</li>
+<li><strong>BBOX 决定生死</strong>：索引查的是矩形。对于斜着的长条形物体（如对角线道路），索引效率天然较低。</li>
+<li><strong>函数即索引</strong>：必须使用支持索引操作符的函数（如 <code>ST_DWithin</code>, <code>ST_Intersects</code>），避免裸写数学计算。</li>
+<li><strong>维护成本</strong>：GiST 索引比 B-Tree 更容易“脏”。高频更新的 OSM 数据库必须有自动化的 VACUUM 和 REINDEX 策略。</li>
+<li><strong>IO 优化</strong>：空间查询本质是 IO 密集型。利用 <code>CLUSTER</code> 进行物理排序是提升生产环境性能的“核武器”。</li>
+</ol>
+<hr />
+<h2 id="44">4.4 练习题</h2>
+<h3 id="_1">基础题</h3>
+<p><strong>Q1. 投影的直觉</strong>
+在 Web Mercator (3857) 投影下，为什么在俄罗斯北部计算的 <code>ST_Buffer(point, 1000)</code>（1000米缓冲区）画在地图上是个完美的圆，而在 WGS84 (4326) 下直接对经纬度加减画出来的“圆”，在高纬度地区看起来像个压扁椭圆？</p>
+<details>
+<summary>查看提示</summary>
+<p>思考经线收敛。在极地附近，1经度的距离远小于1纬度的距离。如果在 lat/lon 轴上取相同数值半径，实际地面距离在东西方向上会短得多。</p>
+</details>
+<p><strong>Q2. 索引失效分析</strong>
+你有一个包含 1000 万个 POI 的表，建了 GiST 索引。执行 <code>SELECT * FROM pois WHERE NOT ST_Intersects(geom, region)</code>（查询所有<strong>不在</strong>区域内的点）。请问这个查询会走索引吗？为什么？</p>
+<details>
+<summary>查看提示</summary>
+<p>几乎不会。索引擅长“包含”和“重叠”。“不包含”意味着可能在地球的任何其他地方，潜在结果集几乎是全表。数据库优化器会选择 Seq Scan（全表扫描）。</p>
+</details>
+<p><strong>Q3. 简单的 KNN</strong>
+在 PostGIS 中，操作符 <code>&lt;-&gt;</code> 代表“中心距离排序”。以下 SQL：<code>SELECT * FROM shop ORDER BY geom &lt;-&gt; my_point LIMIT 10;</code> 为什么比 <code>ORDER BY ST_Distance(geom, my_point) LIMIT 10</code> 快几个数量级？</p>
+<details>
+<summary>查看提示</summary>
+<p>前者是 <strong>Index-Assisted KNN</strong>。PostGIS 会利用 R-Tree 结构，从离点最近的索引分支开始遍历，找到 10 个就停止。后者必须计算全表所有点到目标的距离，排序后取前 10。</p>
+</details>
+<h3 id="_2">挑战题</h3>
+<p><strong>Q4. 太平洋的幽灵 (Dateline Wrapping)</strong>
+你的导航服务支持全球数据。用户在斐济（经度 179°）搜索附近的点，结果漏掉了东边仅仅 50km 外（经度 -179°）的一个岛屿。这是为什么？如何从 SQL 层面解决（不改动数据的前提下）？</p>
+<details>
+<summary>查看提示</summary>
+<p>数学上 179 到 -179 的差是 358，PostGIS 认为它们隔了整个地球。
+解决思路：</p>
+<ol>
+<li>使用 <code>Geography</code> 类型（原生支持）。</li>
+<li>在 Geometry 下，将查询框切分为两部分：<code>WHERE (geom &amp;&amp; box_part_1) OR (geom &amp;&amp; box_part_2)</code>。</li>
+<li>或者使用 <code>ST_Shift_Longitude</code> 将所有负经度平移到 180-360 范围再比较。</li>
+</ol>
+</details>
+<p><strong>Q5. 大对象 (Large Geometry) 陷阱</strong>
+Nominatim 入了某个国家的行政边界（Relation），由 50,000 个点组成的多边形。每次判断“当前坐标在哪个国家”时，CPU 占用极高。除了简化多边形，有什么<strong>存储结构上</strong>的优化策略？</p>
+<details>
+<summary>查看提示</summary>
+<p><strong>Subdivision (ST_Subdivide)</strong>。
+将那个拥有 5万个点的大多边形，切碎成 500 个拥有 100 个点的小多边形，存入辅助表。
+查询时，点只需落入某个小多边形的 BBOX，随后进行的精确计算（Recheck）只需针对那 100 个点，而不是 5万个点。这是极大的性能提升。</p>
+</details>
+<p><strong>Q6. 解释计划分析</strong>
+在 <code>EXPLAIN (ANALYZE, BUFFERS)</code> 的输出中，看到了 <code>Heap Fetches: 0</code> 和 <code>Heap Blocks: lossy</code>。这通常发生在 Bitmap Heap Scan 中。这代表了什么物理现象？此时 <code>work_mem</code> 可能出现了什么问题？</p>
+<details>
+<summary>查看提示</summary>
+<p><code>Lossy</code> 意味着分配给 Bitmap Scan 的内存（<code>work_mem</code>）不够用了。
+数据库无法精确记录“哪行”命中了，只能退化为记录“哪一页（Page）”命中了。
+结果就是数据库必须读取整个页面并重新检查每一行（Recheck），导致 CPU 和 IO 浪费。增加 <code>work_mem</code> 可能解决此问题。</p>
+</details>
+<hr />
+<h2 id="45-gotchas">4.5 常见陷阱与错误 (Gotchas)</h2>
+<h3 id="1-toast">1. TOAST 表引发的性能抖动</h3>
+<p>PostgreSQL 的 Page 大小默认是 8KB。如果一个 OSM Way（比如长距离高速公路）的几何数据超过 2KB，它会被压缩并切片存到 <strong>TOAST</strong> 辅助表中。</p>
+<ul>
+<li><strong>现象</strong>：查询大多数点很快，一旦查到复杂的行政区或长路，耗时突然增加 10 倍。</li>
+<li><strong>对策</strong>：在 <code>SELECT</code> 列表中不要无脑 <code>SELECT *</code>。如果你只需要 ID 和名字，就不要把 <code>geometry</code> 列取出来，避免触发 TOAST 解压和读取。</li>
+</ul>
+<h3 id="2-latlon">2. 坐标顺序 (Lat/Lon) 的永恒诅咒</h3>
+<ul>
+<li><strong>标准</strong>：PostGIS 的 <code>ST_MakePoint(x, y)</code> 接受的是 <code>(Lon, Lat)</code>。</li>
+<li><strong>错误习惯</strong>：Google Maps API 和很多前端库习惯用 <code>Lat, Lon</code>。</li>
+<li><strong>后果</strong>点会被投射到错误的位置。比如 <code>(39, 116)</code> 是北京附近，但 <code>ST_MakePoint(39, 116)</code> 指的是北纬 116 度（不存在）或仅仅是翻转了 X/Y。</li>
+<li><strong>调试</strong>：始终用 GeoJSON 验证你的输入点位置。</li>
+</ul>
+<h3 id="3-st_intersects">3. <code>ST_Intersects</code> 并不总是你想要的</h3>
+<p>在导航场景中，用户点击地图上的路，往往点不到路的正中心，而是点在路边。</p>
+<ul>
+<li>使用 <code>ST_Intersects(road, point)</code> 通常返回 False。</li>
+<li><strong>应该用</strong>：<code>ST_DWithin(road, point, tolerance)</code>。给用户手指的抖动留出几米的容错空间。</li>
+</ul>
+<h3 id="4-vacuum-analyze">4. 忽略了 <code>VACUUM ANALYZE</code></h3>
+<p>大量导入或更新 OSM 数据后，如果没有运行 <code>ANALYZE</code>，PostgreSQL 的统计信息是旧的。</p>
+<ul>
+<li><strong>后果</strong>：规划器可能会认为表是空的，从而选择全表扫描而不是索引扫描。</li>
+<li><strong>操作</strong>：在任何批量数据操作后，手动执行一次 <code>ANALYZE table_name;</code>。</li>
+</ul>
+<h3 id="5-geometry-collection">5. 滥用 Geometry Collection</h3>
+<p>OSM 有些 Relation 导出的数据是 <code>GeometryCollection</code>（混合了点、、面）。</p>
+<ul>
+<li><strong>问题</strong>：很多标准函数不支持 Collection，或者索引效率极低。</li>
+<li><strong>对策</strong>：在入库清洗阶段（ETL），使用 <code>ST_CollectionExtract</code> 强行将其拆分为单一类型的几何体。</li>
+</ul>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter3.html" class="nav-link prev">← 第3章｜OSM 数据获取、裁剪与增量更新（构建可持续的数据管道）</a><a href="chapter5.html" class="nav-link next">第5章｜Nominatim 部署与核心 API（search / reverse / lookup） →</a></nav>
+        </main>
+    </div>
+</body>
+</html>
